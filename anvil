@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Template Editor</title>
+    <script src="https://unpkg.com/@grapesjs/studio-sdk/dist/index.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@grapesjs/studio-sdk/dist/style.css"/>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: sans-serif;
+      }
+
+      .top-bar {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        background: #f0f0f0;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .top-bar button {
+        padding: 8px 16px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      #studio-editor {
+        height: calc(100vh - 52px);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="studio-editor"></div>
+
+    <script>
+      let editorInstance;
+
+      GrapesJsStudioSDK.createStudioEditor({
+        root: '#studio-editor',
+        licenseKey: 'dba694b816d74fceab2eeff0b998ae673a669c4573f64e799bf066048b5ba9d5',
+        theme: 'light',
+        ///
+        project: {
+          type: 'email',
+          id: 'email-template-001',
+          default: {
+            pages: [{
+              name: 'Email Template',
+              component: `
+        <table role="presentation" style="width:100%;border:none;border-spacing:0;">
+          <tr>
+            <td align="center" style="padding:0;">
+              <table role="presentation" style="width:94%;max-width:600px;border:none;text-align:left;">
+                <tr>
+                  <td>
+                    <img src="cid:CYBER_master_banner.png" width="600" alt="Logo" style="width:100%;height:auto;display:block;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px;background:#fff;">
+                    <h1 style="margin:0;color:#db0011;">Dear approver,</h1>
+                    <p>A request relating to the crypto key {{ wfmetadatadict['key_info'] }} has been submitted.</p>
+                    <p>Please access:
+                      <a href="{{ wfmetadatadict['crypto_link'] }}">
+                        Key Inventory in Anvil
+                      </a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:30px;text-align:center;background:#404040;color:#ccc;">
+                    <p>
+                      <br>Cyber – Cryptography<br>
+                      <a class="unsub" href="mailto:key.inventory.approval.requests@noexternalmail.hsbc.com"
+                        style="color:#cccccc;text-decoration:underline;">
+                        key.inventory.approval.requests@noexternalmail.hsbc.com
+                      </a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `
+            }]
+          }
+        },
+        ///
+        identity: {
+          id: 'user-001'
+        },
+        storage: {
+          type: 'cloud',
+          autosaveChanges: 100,
+          autosaveIntervalMs: 10000
+        },
+        assets: {
+          storageType: 'cloud'
+        },
+        blocks: {
+          default: [
+            {
+              id: 'email-section',
+              label: 'Section',
+              media: `<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>`,
+              content: {
+                type: 'section',
+                style: {
+                  padding: '20px',
+                  background: '#ffffff'
+                },
+                components: [
+                  { type: 'text', components: 'Insert your message here' }
+                ]
+              }
+            },
+            {
+              id: 'email-image',
+              label: 'Image',
+              media: `<svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h10l4 4Z"/></svg>`,
+              content: {
+                type: 'image',
+                src: 'https://via.placeholder.com/600x200',
+                style: { width: '100%' }
+              }
+            },
+            {
+              id: 'email-button',
+              label: 'Button',
+              media: `<svg viewBox="0 0 24 24"><path d="M3 12h18v2H3z"/></svg>`,
+              content: {
+                tagName: 'a',
+                attributes: { href: '#', class: 'button' },
+                components: 'Click Me',
+                style: {
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  background: '#007bff',
+                  color: '#fff',
+                  'text-align': 'center',
+                  'text-decoration': 'none',
+                  'border-radius': '4px'
+                }
+              }
+            }
+          ]
+        },
+        canvas: {
+          styles: [
+            'body { background: #f3f3f3; padding: 20px; }',
+            '.button { font-family: sans-serif; font-size: 16px; }'
+          ]
+        },
+        layout: {
+          default: {
+            type: 'row',
+            style: { height: '100%' },
+            children: [
+              {
+                type: 'panelBlocks',
+                header: {
+                  label: 'Blocks',
+                  collapsible: true,
+                  style: { width: '260px' }
+                },
+                symbols: false
+              },
+              {
+                type: 'canvas',
+                style: { flex: 1 }
+              },
+              {
+                type: 'panelRight',
+                header: {
+                  label: 'Properties',
+                  collapsible: true,
+                  style: { width: '300px' }
+                },
+                resizable: true,
+                tabs: [
+                  { id: 'style', label: 'Style' },
+                  { id: 'traits', label: 'Traits' },
+                  { id: 'layers', label: 'Layers' }
+                ]
+              }
+            ]
+          }
+        }
+
+      }).then(editor => {
+        editorInstance = editor;
+        console.log("Email editor ready");
+      });
+
+
+    </script>
+  </body>
+</html>
+
