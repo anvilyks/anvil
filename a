@@ -1,0 +1,103 @@
+import anvil.tables as tables
+import anvil.tables.query as q
+from anvil.tables import app_tables
+import anvil.server
+
+@anvil.server.callable
+def save_template(name, html_content):
+  app_tables.templates.add_row(name=name, content_html=html_content, created_at=datetime.now())
+
+@anvil.server.callable
+def save_templaate(name, project):
+  json_str = project
+  row = app_tables.emailtemplates.get(name=name)
+  if row:
+    row['project_json'] = json_str
+  else:
+    app_tables.emailtemplates.add_row(name=name, project_json=json_str)
+
+@anvil.server.callable
+def load_template(name):
+  row = app_tables.emailtemplates.get(name=name)
+  if not row:
+    return {}
+  return json.loads(row['project_json'])
+
+  import anvil.server
+
+@anvil.server.http_endpoint("/get-template")
+def get_template():
+  row = app_tables.emailtemplates.get(name="template-0015")
+  if not row:
+    return {"error": "Template not found"}
+
+  content = row['Column3']
+
+  # Jeśli content to tekst JSON – zwróć go jako string (opcjonalnie jako słownik po json.loads)
+  return content
+
+@anvil.server.http_endpoint("/save-template", methods=["POST"])
+def save_template(**kwargs):
+  data = anvil.server.request.body_json
+  template_id = data.get("template_id")
+  content = data.get("content")
+  
+  # Zakładamy, że content to już JSON-string z edytora (czyli np. JSON.stringify(project))
+  # Możesz go zapisać jako tekst:
+  app_tables.emailtemplates.add_row(
+    name=template_id,
+    Column3=content
+  )
+  
+  return {
+    "status": "ok",
+    "saved_template": content
+  }
+
+
+
+from ._anvil_designer import Form1Template
+from anvil import *
+import anvil.tables as tables
+import anvil.tables.query as q
+from anvil.tables import app_tables
+import anvil.server
+import json
+import time
+class Form1(Form1Template):
+  def __init__(self, **properties):
+    # Set Form properties and Data Bindings.
+    self.init_components(**properties)
+
+    # Any code you write here will run before the form opens.
+
+  
+  def save_click(self, **event_args):
+    for i in range(10):
+      json_string = anvil.js.call("getSavedProjectFromGrapes")
+      if json_string:
+        break
+      time.sleep(0.5)
+
+    if not json_string:
+      alert("Editor not ready yet.")
+    else:
+  # np. zapisz do DB
+      print(json_string)
+    json_str = self.custom_html_1.call_js('manualSaveProjectToGlobal')
+    project = json.loads(json_str)
+    name = 'test'
+    db_row = app_tables.templates.get(name=name)
+    if db_row:
+      db_row.update(project_json=project)
+    else:
+      app_tables.templates.add_row(name=name, project=project)
+
+  def button_2_click(self, **event_args):
+    """This method is called when the button is clicked"""
+    name = 'test'
+    template = anvil.server.call('load_template', name)
+    self.custom_html_1.call_js('load_editor_project', template)
+
+
+
