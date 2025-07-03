@@ -10,7 +10,30 @@
   <body>
     <div id="studio-editor" style="height: 100dvh"></div>
     <script>
-      GrapesJsStudioSDK.createStudioEditor({
+        let editor; // globalna zmienna
+  
+        const onReady = (ed) => {
+          editor = ed; // przypisz edytor do zmiennej globalnej
+          window.editorInstance = ed; // opcjonalnie – do debugowania w konsoli
+          console.log("✅ Editor gotowy");
+        };
+  
+        const toggleAddPage = () => {
+          if (!editor) return console.warn("Editor not ready");
+          const config = editor.runCommand(GrapesJsStudioSDK.StudioCommands.getPagesConfig) || {};
+          editor.runCommand(GrapesJsStudioSDK.StudioCommands.setPagesConfig, {
+            config: { add: !config.add }
+          });
+        };
+  
+        const togglePageSettings = () => {
+          if (!editor) return console.warn("Editor not ready");
+          const state = editor.runCommand(GrapesJsStudioSDK.StudioCommands.getPageSettings) || {};
+          editor.runCommand(GrapesJsStudioSDK.StudioCommands.setPageSettings, {
+            isOpen: !state.isOpen
+          });
+        };
+        const ed = GrapesJsStudioSDK.createStudioEditor({
         root: '#studio-editor',
         licenseKey: 'dba694b816d74fceab2eeff0b998ae673a669c4573f64e799bf066048b5ba9d5',
         theme: 'dark',
@@ -37,20 +60,31 @@
             await fetch('ASSETS_DELETE_URL', { method: 'DELETE', body });
           }
         },
+        onReady,
         storage: {
           type: 'self',
           // Provide a custom handler for saving the project data.
           onSave: async ({ project }) => {
-            const body = new FormData();
-            body.append('project', JSON.stringify(project));
+            
+            // const selectedPage = editor.Pages.getSelected();
+            // if (!selectedPage) throw new Error("Brak wybranej strony");
+
+            // const component = selectedPage.getMainComponent();
+            // const html = editor.getHtml({ component });
+            // const css = editor.getCss({ component });
+            
+            // console.log(html, css)
+            const wrapper = editor.getWrapper(); // główny komponent
+            const html = wrapper.toHTML({ keepInlineStyle: true });
+            console.log('to jest html', html)
             await fetch("https://wilted-tremendous-east.anvil.app/_/api/save-template", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json"
               },
               body: JSON.stringify({
-                template_id: "template-0015",
-                content: project
+                template_id: "template-0013",
+                content: 1
               })
             })
               .then(async res => {
