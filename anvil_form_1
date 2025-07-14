@@ -1,0 +1,32 @@
+from ._anvil_designer import Form1Template
+from anvil import *
+import anvil.tables as tables
+import anvil.tables.query as q
+from anvil.tables import app_tables
+import anvil.server
+import json
+import time
+from anvil.js import window  # ✅ poprawny import
+
+import anvil.js.window as window
+
+class Form1(Form1Template):
+  def __init__(self, **properties):
+    self.init_components(**properties)
+  
+  
+
+    # ✅ Zdefiniuj funkcję lokalnie i przypisz do window
+    def save_callback_from_js(html, project_json):
+      result = anvil.server.call("save_template_to_db", html, project_json)
+      print("✅ Wynik z serwera:", result)
+      return result
+
+    window.save_template_callback = save_callback_from_js
+
+    def save_files_callback_from_js(files):
+      result = anvil.server.call("save_template_file_to_db", files)
+      print("✅ Wynik z serwera:", result)
+      return result
+
+    window.save_files_callback = save_files_callback_from_js
