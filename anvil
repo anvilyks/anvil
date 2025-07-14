@@ -10,13 +10,43 @@
   <body>
     <div id="studio-editor" style="height: 100dvh"></div>
     <script>
+     
         let editor; // globalna zmienna
-  
-        const onReady = (ed) => {
-          editor = ed; // przypisz edytor do zmiennej globalnej
-          window.editorInstance = ed; // opcjonalnie – do debugowania w konsoli
-          console.log("✅ Editor gotowy");
+
+      const onReady = (studioEditor) => {
+        editor = studioEditor;
+        window.editorInstance = editor;
+        window.studioEditor = studioEditor;
+        const previewButton = document.querySelector('button .gs-cmp-icon path[d*="M2 12H4V18Qv12H22V17C22"]')?.closest('button');
+        if (previewButton) {
+          previewButton.remove();
+          console.log('Usunięto przycisk Preview');
         };
+
+        // ⬇️ TU WKLEJ TO:
+        const idsToRemove = [
+          'mj-hero',
+          'mj-navbar',
+          'mj-social',
+          'mj-social-element',
+          'mj-raw'
+        ];
+
+        if (editor.BlockManager && typeof editor.BlockManager.remove === 'function') {
+          idsToRemove.forEach(id => {
+            if (editor.BlockManager.get(id)) {
+              editor.BlockManager.remove(id);
+            }
+          });
+        };
+        editor.AssetManager.add({
+          src: "https://wilted-tremendous-east.anvil.app/_/theme/baner.png",
+          name: "Baner z Anvil",
+          category: "Anvil",
+        });
+        
+
+      };
   
         const toggleAddPage = () => {
           if (!editor) return console.warn("Editor not ready");
@@ -35,32 +65,21 @@
         };
         const ed = GrapesJsStudioSDK.createStudioEditor({
         root: '#studio-editor',
-        licenseKey: 'dba694b816d74fceab2eeff0b998ae673a669c4573f64e799bf066048b5ba9d5',
+        licenseKey: '2212ca00d8524845ab8b2e7285c750714884c9f3d17642509f3830631f057be9',
         theme: 'dark',
+        
         project: {
-          type: 'email'
+          type:'email',
+          id: 'UNIQUE_PROJECT_ID'
         },
-        assets: {
-          storageType: 'self',
-          // Provide a custom upload handler for assets
-          onUpload: async ({ files }) => {
-            const body = new FormData();
-            for (const file of files) {
-              body.append('files', file);
-            }
-            const response = await fetch('ASSETS_UPLOAD_URL', { method: 'POST', body });
-            const result = await response.json();
-            // The expected result should be an array of assets, eg.
-            // [{ src: 'ASSET_URL' }]
-            return result;
+          identity: {
+            // TODO: replace with a unique id for your end users. e.g. an uuid
+            id: 'UNIQUE_END_USER_ID'
           },
-          // Provide a custom handler for deleting assets
-          onDelete: async ({ assets }) => {
-            const body = JSON.stringify(assets);
-            await fetch('ASSETS_DELETE_URL', { method: 'DELETE', body });
-          }
-        },
-        onReady,
+          onReady,
+          assets: {
+            storageType: 'cloud'
+          },
         storage: {
           type: 'self',
           // Provide a custom handler for saving the project data.
@@ -70,54 +89,56 @@
             // if (!selectedPage) throw new Error("Brak wybranej strony");
 
             // const component = selectedPage.getMainComponent();
-            // const html = editor.getHtml({ component });
+            //const html = editor.getHtml({ component });
             // const css = editor.getCss({ component });
             
             // console.log(html, css)
-            const wrapper = editor.getWrapper(); // główny komponent
-            const html = wrapper.toHTML({ keepInlineStyle: true });
-            console.log('to jest html', html)
-            await fetch("https://wilted-tremendous-east.anvil.app/_/api/save-template", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                template_id: "template-0013",
-                content: 1
-              })
-            })
-              .then(async res => {
-                const contentType = res.headers.get("content-type");
-                const isJson = contentType && contentType.includes("application/json");
+        
+            window.save_template_callback('html', project).then(result => {
+              console.log("✅ async result:", result);
+            });
 
-                if (!res.ok) {
-                  const text = await res.text();
-                  throw new Error("Server error: " + text);
-                }
+           
+           
+            // await fetch("https://wilted-tremendous-east.anvil.app/_/api/save-template", {
+            //   method: "POST",
+            //   headers: {
+            //     "Content-Type": "application/json"
+            //   },
+            //   body: JSON.stringify({
+            //     template_id: "template-0013",
+            //     content: 1
+            //   })
+            // })
+            //   .then(async res => {
+            //     const contentType = res.headers.get("content-type");
+            //     const isJson = contentType && contentType.includes("application/json");
 
-                return isJson ? res.json() : res.text();
-              })
-              .then(data => {
-                console.log("Zapis zakończony:", data);
-              })
-              .catch(err => {
-                console.error("Błąd zapisu:", err.message);
-              });
+            //     if (!res.ok) {
+            //       const text = await res.text();
+            //       throw new Error("Server error: " + text);
+            //     }
+
+            //     return isJson ? res.json() : res.text();
+            //   })
+            //   .then(data => {
+            //     console.log("Zapis zakończony:", data);
+            //   })
+            //   .catch(err => {
+            //     console.error("Błąd zapisu:", err.message);
+            //   });
 
           },
           // Provide a custom handler for loading project data.
           onLoad: async () => {
-            try {
-              const res = await fetch("https://wilted-tremendous-east.anvil.app/_/api/get-template");
-              if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-              const project = await res.json();
-              console.log("Loaded project:", project);
-              return { project };
-            } catch (err) {
-              console.error("onLoad error:", err);
-              return { project: {} }; // fallback
-            }
+            
+            const valueFromAnvil = window.form_test_value;  // ⬅️ dostęp do wartości z Anvil
+            
+
+            const response = await fetch('https://wilted-tremendous-east.anvil.app/_/api/get-template');
+            const project = await response.json();
+            // The project JSON is expected to be returned inside an object.
+            return { project };
           },
           autosaveChanges: 100,
           autosaveIntervalMs: 10000
@@ -127,6 +148,8 @@
           StudioSdkPlugins_layoutSidebarButtons.init({ /* Plugin options: https://app.grapesjs.com/docs-sdk/plugins/layout/sidebar-buttons */ })
         ]
       });
+      
+
     </script>
   </body>
   <html>
