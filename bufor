@@ -88,3 +88,22 @@ for (const [fileName, asset] of Object.entries(result)) {
     category: "Anvil"
   });
 }
+
+
+
+
+function base64ToBlobUrl(dataUri) {
+  // Sprawdź i usuń prefix "data:image/...;base64,"
+  const base64 = dataUri.split(',')[1];
+  const mime = dataUri.split(',')[0].match(/:(.*?);/)[1];
+
+  const byteCharacters = atob(base64);  // <== tutaj był błąd, jeśli base64 zawierał prefix!
+  const byteArrays = [];
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArrays.push(byteCharacters.charCodeAt(i));
+  }
+
+  const blob = new Blob([new Uint8Array(byteArrays)], { type: mime });
+  return URL.createObjectURL(blob);
+}
