@@ -1,19 +1,37 @@
-function replaceAssetsBlobToCustom(project, blobToFile) {
-  if (!project.assets || !Array.isArray(project.assets)) {
-    console.warn("[⚠️] No assets found in project");
-    return;
-  }
+function replaceBlobWithCustomURLInProject(project, blobToCustomMap) {
+  console.log("🔄 Start blob→custom replacement");
 
-  for (const asset of project.assets) {
-    const blobUrl = asset.src;
-    const fileName = blobToFile[blobUrl];
+  function traverse(obj) {
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        traverse(item);
+      }
+    } else if (obj && typeof obj === "object") {
+      // Zamiana: comp.attributes.src
+      if (obj.attributes?.src && blobToCustomMap[obj.attributes.src]) {
+        console.log("🔁 Replacing attributes.src", obj.attributes.src, "→", blobToCustomMap[obj.attributes.src]);
+        obj.attributes.src = blobToCustomMap[obj.attributes.src];
+      }
 
-    if (blobUrl?.startsWith('blob:') && fileName) {
-      const customUrl = `custom:anvil-assets/${fileName}`;
-      console.log(`[🎯] Replacing asset.src "${blobUrl}" → "${customUrl}"`);
-      asset.src = customUrl;
-    } else {
-      console.warn(`[⏭] Skipping asset – no match for blob: ${blobUrl}`);
+      // Zamiana: comp.src
+      if (obj.src && blobToCustomMap[obj.src]) {
+        console.log("🔁 Replacing src", obj.src, "→", blobToCustomMap[obj.src]);
+        obj.src = blobToCustomMap[obj.src];
+      }
+
+      // Rekurencja po wszystkich kluczach
+      for (const key in obj) {
+        traverse(obj[key]);
+      }
     }
   }
+
+  // Główna pętla po stronach i komponentach
+  for (const page of project.pages || []) {
+    for (const frame of page.frames || []) {
+      traverse(frame.component);
+    }
+  }
+
+  console.log("✅ Blob→custom replacement completed");
 }
