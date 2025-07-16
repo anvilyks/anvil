@@ -1,77 +1,19 @@
-const copy_project = JSON.parse(JSON.stringify(project));
-
-
-function replaceBlobToCustomInProject(proj, map) {
-  console.log("[5] 🚀 Running blob→custom replacement");
-
-  function recurse(obj) {
-    if (!obj || typeof obj !== 'object') return;
-
-    if (Array.isArray(obj)) {
-      for (const item of obj) recurse(item);
-      return;
-    }
-
-    // Zamiana atrybutu src w attributes
-    if (obj.attributes?.src && map[obj.attributes.src]) {
-      console.log("[5] 🔁 Replacing attributes.src:", obj.attributes.src);
-      obj.attributes.src = map[obj.attributes.src];
-    }
-
-    // Zamiana bezpośredniego src
-    if (obj.src && map[obj.src]) {
-      console.log("[5] 🔁 Replacing direct comp.src:", obj.src);
-      obj.src = map[obj.src];
-    }
-
-    // Rekurencyjne przeszukiwanie obiektu
-    for (const key in obj) {
-      recurse(obj[key]);
-    }
+function replaceAssetsBlobToCustom(project, blobToFile) {
+  if (!project.assets || !Array.isArray(project.assets)) {
+    console.warn("[⚠️] No assets found in project");
+    return;
   }
 
-  for (const page of proj.pages || []) {
-    recurse(page);
-  }
+  for (const asset of project.assets) {
+    const blobUrl = asset.src;
+    const fileName = blobToFile[blobUrl];
 
-
-const copy_project = JSON.parse(JSON.stringify(project));
-replaceBlobToCustomInProject(copy_project, blobToCustomMap);
-
-
-
-
-
-function logSrcAndTypeFromProject(project) {
-  function recurse(obj, path = '') {
-    if (!obj || typeof obj !== 'object') return;
-
-    if (Array.isArray(obj)) {
-      obj.forEach((item, i) => recurse(item, `${path}[${i}]`));
+    if (blobUrl?.startsWith('blob:') && fileName) {
+      const customUrl = `custom:anvil-assets/${fileName}`;
+      console.log(`[🎯] Replacing asset.src "${blobUrl}" → "${customUrl}"`);
+      asset.src = customUrl;
     } else {
-      if (obj.attributes?.src) {
-        console.log(`[${path}] attributes.src: ${obj.attributes.src}`);
-      }
-      if (obj.src) {
-        console.log(`[${path}] src: ${obj.src}`);
-      }
-      if (obj.type) {
-        console.log(`[${path}] type: ${obj.type}`);
-      }
-
-      for (const key in obj) {
-        if (typeof obj[key] === 'object') {
-          recurse(obj[key], `${path}.${key}`);
-        }
-      }
+      console.warn(`[⏭] Skipping asset – no match for blob: ${blobUrl}`);
     }
   }
-
-  console.log("🔍 Scanning project for src/type:");
-  recurse(project);
 }
-
-
-
-const nativeStringify = (0, eval)('JSON.stringify');
-console.log('copy_project =', nativeStringify(copy_project, null, 2));
