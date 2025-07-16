@@ -1,37 +1,57 @@
-bufor
-  // Krok 1: mapa blob:... → cid:nazwa
-  const assets = editor.AssetManager.getAll().models;
-  const blobToCid = {};
+onSave: async ({ project }) => {
+  try {
+    console.log("[1] onSave start");
 
-  for (const a of assets) {
-    const src = a.get('src');
+    const assets = editor.AssetManager.getAll().models;
+    console.log("[2] AssetManager loaded", assets);
 
-    // Jeśli to base64 – zamień na blob URL i podmień w asset managerze
-    if (src.startsWith('data:')) {
-      const blobUrl = base64ToBlobUrl(src);
-      a.set('src', blobUrl);  // Zaktualizuj src w asset managerze
-      blobToCid[blobUrl] = `cid:${a.get('name')}`;
-    } else if (src.startsWith('blob:')) {
-      blobToCid[src] = `cid:${a.get('name')}`;
-    }
-  }
+    const blobToCid = {};
 
-  // Krok 2: zamiana blob: → cid: w drzewie komponentów
-  function replaceBlobWithCid(components) {
-    for (const comp of components || []) {
-      if (comp.attributes?.src?.startsWith('blob:')) {
-        const cid = blobToCid[comp.attributes.src];
-        if (cid) comp.attributes.src = cid;
-      }
-      if (comp.components) {
-        replaceBlobWithCid(comp.components);
+    for (const a of assets) {
+      const src = a.get('src');
+      const name = a.get('name');
+      console.log("[3] Processing asset:", name, src);
+
+      if (src && src.startsWith('blob:')) {
+        blobToCid[src] = `cid:${name}`;
+        console.log("[4] Mapped blob to cid:", src, "→", blobToCid[src]);
       }
     }
+
+    function replaceSrcRecursive(components) {
+      for (const comp of components || []) {
+        if (comp.attributes?.src?.startsWith('blob:')) {
+          const oldSrc = comp.attributes.src;
+          const newSrc = blobToCid[oldSrc];
+          if (newSrc) {
+            comp.attributes.src = newSrc;
+            console.log("[5] Replaced src:", oldSrc, "→", newSrc);
+          } else {
+            console.warn("[5b] Missing cid mapping for:", oldSrc);
+          }
+        }
+        if (comp.components) {
+          replaceSrcRecursive(comp.components);
+        }
+      }
+    }
+
+    console.log("[6] Starting component replacement");
+    project.pages.forEach(page => {
+      console.log("[6.1] Page:", page.name || page.id);
+      replaceSrcRecursive(page.components);
+    });
+
+    console.log("[7] Final project ready to save:", project);
+
+    await anvil.server.call('save_template_project', project);
+
+    console.log("[8] Project successfully saved");
+
+  } catch (error) {
+    console.error("❌ onSave failed:", error);
   }
-
-  project.pages.forEach(page => replaceBlobWithCid(page.components));
-
-
+}
 
 
 
