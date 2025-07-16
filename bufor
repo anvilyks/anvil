@@ -3,10 +3,9 @@ onSave: async ({ project }) => {
     console.log("[1] onSave start");
 
     const assets = editor.AssetManager.getAll().models;
-    console.log("[2] AssetManager loaded", assets);
+    console.log("[2] AssetManager loaded:", assets);
 
     const blobToCid = {};
-
     for (const a of assets) {
       const src = a.get('src');
       const name = a.get('name');
@@ -42,131 +41,20 @@ onSave: async ({ project }) => {
       replaceSrcRecursive(page.components);
     });
 
+    // 🔄 Ustaw nowy stan edytora (to wpłynie na getHtml)
+    editor.setProject(project);
+
     console.log("[7] Final project ready to save:", project);
 
-    await anvil.server.call('save_template_project', project);
+    const html = editor.getHtml();
+    console.log("[8] async result HTML:", html);
 
-    console.log("[8] Project successfully saved");
+    window.save_files_callback(project, html).then(result => {
+      console.log("[9] async result:", result);
+      console.log("[✅] Project successfully saved");
+    });
 
   } catch (error) {
     console.error("❌ onSave failed:", error);
   }
-}
-
-
-
-
-
-
-
-
-
-
-
-window.load_files_callback = async () => {
-  const assetsDict = await anvil.server.call('get_assets');
-  const cidToBlobUrl = {};
-
-  // Konwertuj wszystkie base64 na blob:...
-  for (const [name, data] of Object.entries(assetsDict)) {
-    const blobUrl = await base64ToBlobUrl(data.base64, data.type);
-    cidToBlobUrl[name] = blobUrl;
-
-    // dodaj do AssetManagera
-    editor.AssetManager.add({
-      name,
-      src: blobUrl,
-      category: 'Anvil'
-    });
-  }
-
-  // Pobierz projekt (z src="cid:logo.png")
-  const project = await anvil.server.call('get_template_project');
-
-  // Zastąp wszystkie src="cid:nazwa" na src=blobUrl
-  function replaceCids(components) {
-    for (const comp of components || []) {
-      if (comp.attributes?.src?.startsWith('cid:')) {
-        const fileName = comp.attributes.src.slice(4);  // usuń "cid:"
-        comp.attributes.src = cidToBlobUrl[fileName];
-      }
-      if (comp.components) replaceCids(comp.components);
-    }
-  }
-
-  project.pages.forEach(page => replaceCids(page.components));
-  return { project };
 };
-
-
-onSave: async ({ project }) => {
-  // mapa blob: → nazwa pliku
-  const assets = editor.AssetManager.getAll().models;
-  const blobToCid = {};
-  for (const a of assets) {
-    blobToCid[a.get('src')] = `cid:${a.get('name')}`;
-  }
-
-  // Zamień blob:... → cid:...
-  function revertBlobToCid(components) {
-    for (const comp of components || []) {
-      if (comp.attributes?.src?.startsWith('blob:')) {
-        const cid = blobToCid[comp.attributes.src];
-        if (cid) comp.attributes.src = cid;
-      }
-      if (comp.components) revertBlobToCid(comp.components);
-    }
-  }
-
-  project.pages.forEach(page => revertBlobToCid(page.components));
-
-  // Zapisz projekt np. do serwera
-  await anvil.server.call('save_template_project', project);
-};
-
-
-function base64ToBlobUrl(base64Data, contentType = 'image/png') {
-  const byteCharacters = atob(base64Data);
-  const byteArrays = [];
-
-  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-    const slice = byteCharacters.slice(offset, offset + 512);
-    const byteNumbers = Array.from(slice).map(char => char.charCodeAt(0));
-    byteArrays.push(new Uint8Array(byteNumbers));
-  }
-
-  const blob = new Blob(byteArrays, { type: contentType });
-  return URL.createObjectURL(blob);  // => blob:<UUID>
-}
-
-
-const result = await anvil.server.call('get_assets');  // dict z nazwami
-
-for (const [fileName, asset] of Object.entries(result)) {
-  const blobUrl = base64ToBlobUrl(asset.base64, asset.type);
-
-  editor.AssetManager.add({
-    src: blobUrl,
-    name: fileName,
-    category: "Anvil"
-  });
-}
-
-
-
-
-function base64ToBlobUrl(dataUri) {
-  // Sprawdź i usuń prefix "data:image/...;base64,"
-  const base64 = dataUri.split(',')[1];
-  const mime = dataUri.split(',')[0].match(/:(.*?);/)[1];
-
-  const byteCharacters = atob(base64);  // <== tutaj był błąd, jeśli base64 zawierał prefix!
-  const byteArrays = [];
-
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteArrays.push(byteCharacters.charCodeAt(i));
-  }
-
-  const blob = new Blob([new Uint8Array(byteArrays)], { type: mime });
-  return URL.createObjectURL(blob);
-}
