@@ -1,79 +1,34 @@
-const blobToCustom = {};
-  for (const a of assets) {
-    const src = a.get('src');
-    const name = a.get('name');
-    if (src && name && src.startsWith('blob:')) {
-      blobToCustom[src] = `custom:anvil-assets/${name}`;
-    }
-  }
-
-  function replaceSrcToCustom(components) {
-    for (const comp of components || []) {
-      const src = comp.attributes?.src;
-      if (src && blobToCustom[src]) {
-        comp.attributes.src = blobToCustom[src];
-      }
-      if (comp.components) replaceSrcToCustom(comp.components);
-    }
-  }
-
-  project.pages.forEach(page => replaceSrcToCustom(page.components));
+const copy_project = JSON.parse(JSON.stringify(project));
 
 
-
-
-  const result = await anvil.server.call('get_template_project');
-  const assets = editor.AssetManager.getAll().models;
-
-  const customToBlob = {};
-  for (const a of assets) {
-    customToBlob[`custom:anvil-assets/${a.get('name')}`] = a.get('src');
-  }
-
-  function replaceCustomToBlob(components) {
-    for (const comp of components || []) {
-      const src = comp.attributes?.src;
-      if (src && customToBlob[src]) {
-        comp.attributes.src = customToBlob[src];
-      }
-      if (comp.components) replaceCustomToBlob(comp.components);
-    }
-  }
-
-  result.pages.forEach(page => replaceCustomToBlob(page.components));
-  return result;
-
-
-
-
-
-
-
-function replaceBlobInProject(project, blobToCustom) {
+function replaceBlobToCustomInProject(proj, blobToCustomMap) {
   function recurse(components = []) {
     for (const comp of components) {
-      // Atrybut w comp.attributes.src
+      // 1. Atrybuty (np. MJML: attributes.src)
       const attrSrc = comp?.attributes?.src;
-      if (attrSrc && blobToCustom[attrSrc]) {
-        comp.attributes.src = blobToCustom[attrSrc];
-        console.log(`[✔] Patched attr.src: ${attrSrc} → ${blobToCustom[attrSrc]}`);
+      if (attrSrc && blobToCustomMap[attrSrc]) {
+        comp.attributes.src = blobToCustomMap[attrSrc];
+        console.log(`[✅] Patched attr.src:`, attrSrc, "→", blobToCustomMap[attrSrc]);
       }
 
-      // Bezpośrednie pole src
-      if (comp?.src && blobToCustom[comp.src]) {
-        console.log(`[✔] Patched direct src: ${comp.src} → ${blobToCustom[comp.src]}`);
-        comp.src = blobToCustom[comp.src];
+      // 2. Bezpośredni src
+      if (comp?.src && blobToCustomMap[comp.src]) {
+        comp.src = blobToCustomMap[comp.src];
+        console.log(`[✅] Patched direct src:`, comp.src);
       }
 
-      // Rekurencja
+      // 3. Rekurencja
       if (Array.isArray(comp.components)) {
         recurse(comp.components);
       }
     }
   }
 
-  // Przejdź po wszystkich stronach w projekcie
-  for (const page of project.pages || []) {
+  for (const page of proj.pages || []) {
     recurse(page.components);
   }
 }
+
+
+const copy_project = JSON.parse(JSON.stringify(project));
+replaceBlobToCustomInProject(copy_project, blobToCustomMap);
