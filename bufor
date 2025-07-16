@@ -2,31 +2,46 @@ onSave: async ({ project }) => {
   try {
     console.log("[1] onSave start");
 
-    const assets = editor.AssetManager.getAll().models;
-    console.log("[2] AssetManager loaded:", assets);
+    // 1. Pobierz HTML
+    const rawHtml = editor.getHtml();
+    console.log("[2] HTML before blob->cid replace:", rawHtml);
 
+    // 2. Pobierz assety
+    const assets = editor.AssetManager.getAll().models;
     const blobToCid = {};
-    for (const a of assets) {
+
+    assets.forEach((a, i) => {
       const src = a.get('src');
       const name = a.get('name');
-      console.log("[3] Processing asset:", name, src);
-
-      if (src && src.startsWith('blob:')) {
-        blobToCid[src] = `cid:${name}`;
-        console.log("[4] Mapped blob to cid:", src, "→", blobToCid[src]);
+      if (!src || !name) {
+        console.warn(`[2.${i}] ⚠️ Asset missing src or name:`, a);
+        return;
       }
-    }
+      if (src.startsWith('blob:')) {
+        blobToCid[src] = `cid:${name}`;
+        console.log(`[2.${i}] Mapped blob to cid:`, src, "→", blobToCid[src]);
+      }
+    });
 
+    // 3. Zamień blob: na cid: w HTML
+    let html = rawHtml;
+    for (const [blobUrl, cidUrl] of Object.entries(blobToCid)) {
+      const escapedBlobUrl = blobUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex
+      html = html.replace(new RegExp(escapedBlobUrl, 'g'), cidUrl);
+    }
+    console.log("[3] HTML after blob->cid:", html);
+
+    // 4. Zamień blob: na cid: w strukturze projektu
     function replaceSrcRecursive(components) {
       for (const comp of components || []) {
-        if (comp.attributes?.src?.startsWith('blob:')) {
-          const oldSrc = comp.attributes.src;
+        const oldSrc = comp.attributes?.src;
+        if (oldSrc?.startsWith('blob:')) {
           const newSrc = blobToCid[oldSrc];
           if (newSrc) {
             comp.attributes.src = newSrc;
-            console.log("[5] Replaced src:", oldSrc, "→", newSrc);
+            console.log("[4] Replaced in project:", oldSrc, "→", newSrc);
           } else {
-            console.warn("[5b] Missing cid mapping for:", oldSrc);
+            console.warn("[4] ⚠️ No cid mapping for:", oldSrc);
           }
         }
         if (comp.components) {
@@ -35,24 +50,16 @@ onSave: async ({ project }) => {
       }
     }
 
-    console.log("[6] Starting component replacement");
-    project.pages.forEach(page => {
-      console.log("[6.1] Page:", page.name || page.id);
+    console.log("[5] Start replacing project components");
+    project.pages.forEach((page) => {
+      console.log("[5.1] Page:", page.name || page.id);
       replaceSrcRecursive(page.components);
     });
 
-    // 🔄 Ustaw nowy stan edytora (to wpłynie na getHtml)
-    editor.setProject(project);
+    console.log("[6] Saving to server...");
+    await anvil.server.call('save_template_project', project, html);
 
-    console.log("[7] Final project ready to save:", project);
-
-    const html = editor.getHtml();
-    console.log("[8] async result HTML:", html);
-
-    window.save_files_callback(project, html).then(result => {
-      console.log("[9] async result:", result);
-      console.log("[✅] Project successfully saved");
-    });
+    console.log("✅ [7] Project successfully saved");
 
   } catch (error) {
     console.error("❌ onSave failed:", error);
