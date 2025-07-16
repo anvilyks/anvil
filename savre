@@ -42,3 +42,36 @@ const blobToCustom = {};
 
   result.pages.forEach(page => replaceCustomToBlob(page.components));
   return result;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function replaceSrcToCustom(components) {
+  for (const comp of components || []) {
+    // Atrybuty (najczęstsze)
+    const attrSrc = comp.attributes?.src;
+    if (attrSrc && blobToCustom[attrSrc]) {
+      comp.attributes.src = blobToCustom[attrSrc];
+      console.log("[↪] Replaced attribute src:", attrSrc, "→", blobToCustom[attrSrc]);
+    }
+
+    // Bezpośredni src (rzadsze, np. MJML)
+    if (comp.src && blobToCustom[comp.src]) {
+      comp.src = blobToCustom[comp.src];
+      console.log("[↪] Replaced direct comp.src:", comp.src, "→", blobToCustom[comp.src]);
+    }
+
+    // Rekurencja
+    if (comp.components) replaceSrcToCustom(comp.components);
+  }
+}
