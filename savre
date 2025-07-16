@@ -1,37 +1,36 @@
-function replaceBlobWithCustomURLInProject(project, blobToCustomMap) {
-  console.log("🔄 Start blob→custom replacement");
+function replaceBlobToCustomInPages(project, blobToCustomMap) {
+  if (!project?.pages) return;
 
-  function traverse(obj) {
-    if (Array.isArray(obj)) {
-      for (const item of obj) {
-        traverse(item);
-      }
-    } else if (obj && typeof obj === "object") {
-      // Zamiana: comp.attributes.src
-      if (obj.attributes?.src && blobToCustomMap[obj.attributes.src]) {
-        console.log("🔁 Replacing attributes.src", obj.attributes.src, "→", blobToCustomMap[obj.attributes.src]);
-        obj.attributes.src = blobToCustomMap[obj.attributes.src];
-      }
+  console.log("[REPLACE] ▶️ Start blob→custom replacement in pages");
 
-      // Zamiana: comp.src
-      if (obj.src && blobToCustomMap[obj.src]) {
-        console.log("🔁 Replacing src", obj.src, "→", blobToCustomMap[obj.src]);
-        obj.src = blobToCustomMap[obj.src];
-      }
-
-      // Rekurencja po wszystkich kluczach
-      for (const key in obj) {
-        traverse(obj[key]);
-      }
-    }
-  }
-
-  // Główna pętla po stronach i komponentach
-  for (const page of project.pages || []) {
+  for (const page of project.pages) {
     for (const frame of page.frames || []) {
-      traverse(frame.component);
+      recurseComponents(frame.component);
     }
   }
 
-  console.log("✅ Blob→custom replacement completed");
+  function recurseComponents(component) {
+    if (!component || typeof component !== 'object') return;
+
+    // Bezpośredni src (na poziomie komponentu)
+    if (component.src && blobToCustomMap[component.src]) {
+      console.log("[REPLACE] 🔁 component.src:", component.src, "→", blobToCustomMap[component.src]);
+      component.src = blobToCustomMap[component.src];
+    }
+
+    // src wewnątrz attributes
+    if (component.attributes?.src && blobToCustomMap[component.attributes.src]) {
+      console.log("[REPLACE] 🔁 component.attributes.src:", component.attributes.src, "→", blobToCustomMap[component.attributes.src]);
+      component.attributes.src = blobToCustomMap[component.attributes.src];
+    }
+
+    // Rekurencyjnie komponenty
+    if (Array.isArray(component.components)) {
+      for (const child of component.components) {
+        recurseComponents(child);
+      }
+    }
+  }
+
+  console.log("[REPLACE] ✅ Finished blob→custom replacement");
 }
