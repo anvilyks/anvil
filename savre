@@ -49,28 +49,31 @@ const blobToCustom = {};
 
 
 
-
 function replaceBlobInProject(project, blobToCustom) {
   function recurse(components = []) {
     for (const comp of components) {
-      // Atrybut src w attributes (np. mj-image)
-      const attrSrc = comp.attributes?.src;
+      // Atrybut w comp.attributes.src
+      const attrSrc = comp?.attributes?.src;
       if (attrSrc && blobToCustom[attrSrc]) {
         comp.attributes.src = blobToCustom[attrSrc];
-        console.log(`[✔] Patched attr src: ${attrSrc} → ${blobToCustom[attrSrc]}`);
+        console.log(`[✔] Patched attr.src: ${attrSrc} → ${blobToCustom[attrSrc]}`);
       }
 
-      // Bezpośredni src (np. czasem poza attributes)
-      if (comp.src && blobToCustom[comp.src]) {
-        comp.src = blobToCustom[comp.src];
+      // Bezpośrednie pole src
+      if (comp?.src && blobToCustom[comp.src]) {
         console.log(`[✔] Patched direct src: ${comp.src} → ${blobToCustom[comp.src]}`);
+        comp.src = blobToCustom[comp.src];
       }
 
       // Rekurencja
-      if (comp.components) recurse(comp.components);
+      if (Array.isArray(comp.components)) {
+        recurse(comp.components);
+      }
     }
   }
 
-  project.pages.forEach(page => recurse(page.components));
+  // Przejdź po wszystkich stronach w projekcie
+  for (const page of project.pages || []) {
+    recurse(page.components);
+  }
 }
-replaceBlobInProject(project, blobToCustom);
