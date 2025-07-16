@@ -1,0 +1,62 @@
+bufor 
+
+window.load_files_callback = async () => {
+  const assetsDict = await anvil.server.call('get_assets');
+  const cidToBlobUrl = {};
+
+  // Konwertuj wszystkie base64 na blob:...
+  for (const [name, data] of Object.entries(assetsDict)) {
+    const blobUrl = await base64ToBlobUrl(data.base64, data.type);
+    cidToBlobUrl[name] = blobUrl;
+
+    // dodaj do AssetManagera
+    editor.AssetManager.add({
+      name,
+      src: blobUrl,
+      category: 'Anvil'
+    });
+  }
+
+  // Pobierz projekt (z src="cid:logo.png")
+  const project = await anvil.server.call('get_template_project');
+
+  // Zastąp wszystkie src="cid:nazwa" na src=blobUrl
+  function replaceCids(components) {
+    for (const comp of components || []) {
+      if (comp.attributes?.src?.startsWith('cid:')) {
+        const fileName = comp.attributes.src.slice(4);  // usuń "cid:"
+        comp.attributes.src = cidToBlobUrl[fileName];
+      }
+      if (comp.components) replaceCids(comp.components);
+    }
+  }
+
+  project.pages.forEach(page => replaceCids(page.components));
+  return { project };
+};
+
+
+onSave: async ({ project }) => {
+  // mapa blob: → nazwa pliku
+  const assets = editor.AssetManager.getAll().models;
+  const blobToCid = {};
+  for (const a of assets) {
+    blobToCid[a.get('src')] = `cid:${a.get('name')}`;
+  }
+
+  // Zamień blob:... → cid:...
+  function revertBlobToCid(components) {
+    for (const comp of components || []) {
+      if (comp.attributes?.src?.startsWith('blob:')) {
+        const cid = blobToCid[comp.attributes.src];
+        if (cid) comp.attributes.src = cid;
+      }
+      if (comp.components) revertBlobToCid(comp.components);
+    }
+  }
+
+  project.pages.forEach(page => revertBlobToCid(page.components));
+
+  // Zapisz projekt np. do serwera
+  await anvil.server.call('save_template_project', project);
+};
