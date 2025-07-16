@@ -1,22 +1,29 @@
-editor.on('asset:upload:end', () => {
-  console.log('[2] Asset upload finished');
-  // Tutaj można odpalić funkcję `loadProject()`
-});
+function replaceCidWithBlob(components, cidToBlob) {
+  for (const comp of components || []) {
+    const attrs = comp.attributes || {};
 
-
-function waitForAssetsThenLoad(project) {
-  const maxTries = 20;
-  let tries = 0;
-
-  const checkAssets = setInterval(() => {
-    const assets = editor.AssetManager.getAll().models;
-
-    if (assets.length > 0 || tries > maxTries) {
-      clearInterval(checkAssets);
-      console.log("[✅] Assets ready, loading project");
-      editor.loadProjectData(project);
-    } else {
-      console.log("[…] Waiting for assets to be available...");
-      tries += 1;
+    for (const [key, val] of Object.entries(attrs)) {
+      if (typeof val === "string" && val.startsWith("cid:")) {
+        const blob = cidToBlob[val];
+        if (blob) {
+          comp.attributes[key] = blob;
+          console.log(`[cid→blob] Replaced ${key}:`, val, "→", blob);
+        } else {
+          console.warn(`[cid→blob] Missing blob for:`, val);
+        }
+      }
     }
-  }, 200);
+
+    if (comp.components) {
+      replaceCidWithBlob(comp.components, cidToBlob);
+    }
+  }
+}
+
+
+const project = await anvil.server.call('load_project');
+const cidToBlob = {
+  'cid:baner.png': 'blob:https://....', // ← musisz mieć mapę z serwera lub clienta
+};
+project.pages.forEach(page => replaceCidWithBlob(page.components, cidToBlob));
+editor.setProject(project);
