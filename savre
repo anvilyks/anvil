@@ -52,26 +52,30 @@ const blobToCustom = {};
 
 
 
+function replaceBlobInProject(project, blobToCustom) {
+  function recurse(components = []) {
+    for (const comp of components) {
+      // Atrybuty
+      const srcAttr = comp.attributes?.src;
+      if (srcAttr && blobToCustom[srcAttr]) {
+        comp.attributes.src = blobToCustom[srcAttr];
+        console.log(`[✔] Patched attribute src in JSON: ${srcAttr} → ${blobToCustom[srcAttr]}`);
+      }
 
+      // Bezpośredni src (np. mj-image może mieć też top-level src)
+      if (comp.src && blobToCustom[comp.src]) {
+        comp.src = blobToCustom[comp.src];
+        console.log(`[✔] Patched direct src in JSON: ${comp.src} → ${blobToCustom[comp.src]}`);
+      }
 
-
-
-function replaceSrcToCustom(components) {
-  for (const comp of components || []) {
-    // Atrybuty (najczęstsze)
-    const attrSrc = comp.attributes?.src;
-    if (attrSrc && blobToCustom[attrSrc]) {
-      comp.attributes.src = blobToCustom[attrSrc];
-      console.log("[↪] Replaced attribute src:", attrSrc, "→", blobToCustom[attrSrc]);
+      // Rekurencja
+      if (comp.components) {
+        recurse(comp.components);
+      }
     }
-
-    // Bezpośredni src (rzadsze, np. MJML)
-    if (comp.src && blobToCustom[comp.src]) {
-      comp.src = blobToCustom[comp.src];
-      console.log("[↪] Replaced direct comp.src:", comp.src, "→", blobToCustom[comp.src]);
-    }
-
-    // Rekurencja
-    if (comp.components) replaceSrcToCustom(comp.components);
   }
+
+  project.pages.forEach(page => recurse(page.components));
 }
+
+replaceBlobInProject(project, blobToCustom);
