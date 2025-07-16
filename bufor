@@ -36,3 +36,12 @@ onLoad: async () => {
 
   return { project };
 };
+
+
+window.onerror = function(message, source, lineno, colno, error) {
+  console.error("Global Error:", { message, source, lineno, colno, error });
+};
+
+window.onunhandledrejection = function(event) {
+  console.error("Unhandled Promise rejection:", event.reason);
+};
