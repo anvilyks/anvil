@@ -1,4 +1,47 @@
-bufor 
+bufor
+  // Krok 1: mapa blob:... → cid:nazwa
+  const assets = editor.AssetManager.getAll().models;
+  const blobToCid = {};
+
+  for (const a of assets) {
+    const src = a.get('src');
+
+    // Jeśli to base64 – zamień na blob URL i podmień w asset managerze
+    if (src.startsWith('data:')) {
+      const blobUrl = base64ToBlobUrl(src);
+      a.set('src', blobUrl);  // Zaktualizuj src w asset managerze
+      blobToCid[blobUrl] = `cid:${a.get('name')}`;
+    } else if (src.startsWith('blob:')) {
+      blobToCid[src] = `cid:${a.get('name')}`;
+    }
+  }
+
+  // Krok 2: zamiana blob: → cid: w drzewie komponentów
+  function replaceBlobWithCid(components) {
+    for (const comp of components || []) {
+      if (comp.attributes?.src?.startsWith('blob:')) {
+        const cid = blobToCid[comp.attributes.src];
+        if (cid) comp.attributes.src = cid;
+      }
+      if (comp.components) {
+        replaceBlobWithCid(comp.components);
+      }
+    }
+  }
+
+  project.pages.forEach(page => replaceBlobWithCid(page.components));
+
+
+
+
+
+
+
+
+
+
+
+
 
 window.load_files_callback = async () => {
   const assetsDict = await anvil.server.call('get_assets');
