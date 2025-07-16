@@ -1,21 +1,28 @@
-window.setApiFunction().then(result => {
-  const assets = editor.AssetManager.getAll().models;
+if (!window.__assetsLoaded) {
+  window.setApiFunction().then(result => {
+    const assets = editor.AssetManager.getAll().models;
 
-  for (const [file_name, asset] of Object.entries(result)) {
-    const alreadyExists = assets.some(a => a.get('name') === file_name);
-    
-    if (alreadyExists) {
-      console.log(`[⚠️] Asset "${file_name}" already exists — skipping`);
-      continue;
+    for (const [file_name, asset] of Object.entries(result)) {
+      const alreadyExists = assets.some(a => a.get('name') === file_name);
+      
+      if (alreadyExists) {
+        console.log(`[⚠️] Asset "${file_name}" already exists — skipping`);
+        continue;
+      }
+
+      const blobUrl = base64ToBlobUrl(asset.base64, asset.type);
+      console.log(`[+] Adding asset "${file_name}" with URL:`, blobUrl);
+
+      editor.AssetManager.add({
+        src: blobUrl,
+        name: file_name,
+        category: "Anvil",
+      });
     }
 
-    const blobUrl = base64ToBlobUrl(asset.base64, asset.type);
-    console.log(`[+] Adding asset "${file_name}" with URL:`, blobUrl);
-
-    editor.AssetManager.add({
-      src: blobUrl,
-      name: file_name,
-      category: "Anvil",
-    });
-  }
-});
+    // 🏁 Ustawiamy flagę po zakończeniu dodawania
+    window.__assetsLoaded = true;
+  });
+} else {
+  console.log("✅ AssetManager already loaded – skipping reload");
+}
