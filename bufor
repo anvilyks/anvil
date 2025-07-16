@@ -60,3 +60,31 @@ onSave: async ({ project }) => {
   // Zapisz projekt np. do serwera
   await anvil.server.call('save_template_project', project);
 };
+
+
+function base64ToBlobUrl(base64Data, contentType = 'image/png') {
+  const byteCharacters = atob(base64Data);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+    const byteNumbers = Array.from(slice).map(char => char.charCodeAt(0));
+    byteArrays.push(new Uint8Array(byteNumbers));
+  }
+
+  const blob = new Blob(byteArrays, { type: contentType });
+  return URL.createObjectURL(blob);  // => blob:<UUID>
+}
+
+
+const result = await anvil.server.call('get_assets');  // dict z nazwami
+
+for (const [fileName, asset] of Object.entries(result)) {
+  const blobUrl = base64ToBlobUrl(asset.base64, asset.type);
+
+  editor.AssetManager.add({
+    src: blobUrl,
+    name: fileName,
+    category: "Anvil"
+  });
+}
