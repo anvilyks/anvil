@@ -37,3 +37,7 @@ function replaceBlobToCustomInProject(proj, map) {
 
 const copy_project = JSON.parse(JSON.stringify(project));
 replaceBlobToCustomInProject(copy_project, blobToCustomMap);
+
+
+const nativeStringify = (0, eval)('JSON.stringify');
+console.log('copy_project =', nativeStringify(copy_project, null, 2));
