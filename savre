@@ -1,33 +1,38 @@
 const copy_project = JSON.parse(JSON.stringify(project));
 
 
-function replaceBlobToCustomInProject(proj, blobToCustomMap) {
-  function recurse(components = []) {
-    for (const comp of components) {
-      // 1. Atrybuty (np. MJML: attributes.src)
-      const attrSrc = comp?.attributes?.src;
-      if (attrSrc && blobToCustomMap[attrSrc]) {
-        comp.attributes.src = blobToCustomMap[attrSrc];
-        console.log(`[✅] Patched attr.src:`, attrSrc, "→", blobToCustomMap[attrSrc]);
-      }
+function replaceBlobToCustomInProject(proj, map) {
+  console.log("[5] 🚀 Running blob→custom replacement");
 
-      // 2. Bezpośredni src
-      if (comp?.src && blobToCustomMap[comp.src]) {
-        comp.src = blobToCustomMap[comp.src];
-        console.log(`[✅] Patched direct src:`, comp.src);
-      }
+  function recurse(obj) {
+    if (!obj || typeof obj !== 'object') return;
 
-      // 3. Rekurencja
-      if (Array.isArray(comp.components)) {
-        recurse(comp.components);
-      }
+    if (Array.isArray(obj)) {
+      for (const item of obj) recurse(item);
+      return;
+    }
+
+    // Zamiana atrybutu src w attributes
+    if (obj.attributes?.src && map[obj.attributes.src]) {
+      console.log("[5] 🔁 Replacing attributes.src:", obj.attributes.src);
+      obj.attributes.src = map[obj.attributes.src];
+    }
+
+    // Zamiana bezpośredniego src
+    if (obj.src && map[obj.src]) {
+      console.log("[5] 🔁 Replacing direct comp.src:", obj.src);
+      obj.src = map[obj.src];
+    }
+
+    // Rekurencyjne przeszukiwanie obiektu
+    for (const key in obj) {
+      recurse(obj[key]);
     }
   }
 
   for (const page of proj.pages || []) {
-    recurse(page.components);
+    recurse(page);
   }
-}
 
 
 const copy_project = JSON.parse(JSON.stringify(project));
