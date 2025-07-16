@@ -1,65 +1,22 @@
-try {
-    console.log("[1] onSave start");
+editor.on('asset:upload:end', () => {
+  console.log('[2] Asset upload finished');
+  // Tutaj można odpalić funkcję `loadProject()`
+});
 
-    // 1. Pobierz HTML
-    const rawHtml = editor.getHtml();
-    console.log("[2] HTML before blob->cid replace:", rawHtml);
 
-    // 2. Pobierz assety
+function waitForAssetsThenLoad(project) {
+  const maxTries = 20;
+  let tries = 0;
+
+  const checkAssets = setInterval(() => {
     const assets = editor.AssetManager.getAll().models;
-    const blobToCid = {};
 
-    assets.forEach((a, i) => {
-      const src = a.get('src');
-      const name = a.get('name');
-      if (!src || !name) {
-        console.warn(`[2.${i}] ⚠️ Asset missing src or name:`, a);
-        return;
-      }
-      if (src.startsWith('blob:')) {
-        blobToCid[src] = `cid:${name}`;
-        console.log(`[2.${i}] Mapped blob to cid:`, src, "→", blobToCid[src]);
-      }
-    });
-
-    // 3. Zamień blob: na cid: w HTML
-    let html = rawHtml;
-    for (const [blobUrl, cidUrl] of Object.entries(blobToCid)) {
-      const escapedBlobUrl = blobUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex
-      html = html.replace(new RegExp(escapedBlobUrl, 'g'), cidUrl);
+    if (assets.length > 0 || tries > maxTries) {
+      clearInterval(checkAssets);
+      console.log("[✅] Assets ready, loading project");
+      editor.loadProjectData(project);
+    } else {
+      console.log("[…] Waiting for assets to be available...");
+      tries += 1;
     }
-    console.log("[3] HTML after blob->cid:", html);
-
-    // 4. Zamień blob: na cid: w strukturze projektu
-    function replaceSrcRecursive(components) {
-      for (const comp of components || []) {
-        const oldSrc = comp.attributes?.src;
-        if (oldSrc?.startsWith('blob:')) {
-          const newSrc = blobToCid[oldSrc];
-          if (newSrc) {
-            comp.attributes.src = newSrc;
-            console.log("[4] Replaced in project:", oldSrc, "→", newSrc);
-          } else {
-            console.warn("[4] ⚠️ No cid mapping for:", oldSrc);
-          }
-        }
-        if (comp.components) {
-          replaceSrcRecursive(comp.components);
-        }
-      }
-    }
-
-    console.log("[5] Start replacing project components");
-    project.pages.forEach((page) => {
-      console.log("[5.1] Page:", page.name || page.id);
-      replaceSrcRecursive(page.components);
-    });
-
-    console.log("[6] Saving to server...");
-    await anvil.server.call('save_template_project', project, html);
-
-    console.log("✅ [7] Project successfully saved");
-
-  } catch (error) {
-    console.error("❌ onSave failed:", error);
-  }
+  }, 200);
