@@ -1,0 +1,77 @@
+function replaceCustomToBlobInAssets(project, customToBlobMap) {
+  if (!project.assets || !Array.isArray(project.assets)) {
+    console.warn("[RESTORE] ⚠️ No assets found in project");
+    return;
+  }
+
+  for (const asset of project.assets) {
+    const src = asset.src;
+    const blobUrl = customToBlobMap[src];
+
+    if (src?.startsWith('custom:') && blobUrl) {
+      console.log(`[RESTORE] 🔁 asset.src: ${src} → ${blobUrl}`);
+      asset.src = blobUrl;
+    } else {
+      console.warn(`[RESTORE] ⚠️ Skipping asset – no match for custom: ${src}`);
+    }
+  }
+}
+
+
+function replaceCustomToBlobInPages(project, customToBlobMap) {
+  if (!project?.pages) return;
+
+  console.log("[RESTORE] ▶️ Start custom→blob replacement in pages");
+
+  for (const page of project.pages) {
+    for (const frame of page.frames || []) {
+      recurseComponents(frame.component);
+    }
+  }
+
+  function recurseComponents(component) {
+    if (!component || typeof component !== 'object') return;
+
+    // Bezpośredni src
+    if (component.src && customToBlobMap[component.src]) {
+      console.log("[RESTORE] 🔁 component.src:", component.src, "→", customToBlobMap[component.src]);
+      component.src = customToBlobMap[component.src];
+    }
+
+    // Wewnątrz attributes
+    if (component.attributes?.src && customToBlobMap[component.attributes.src]) {
+      console.log("[RESTORE] 🔁 component.attributes.src:", component.attributes.src, "→", customToBlobMap[component.attributes.src]);
+      component.attributes.src = customToBlobMap[component.attributes.src];
+    }
+
+    // Rekurencja – przetwarzamy dzieci
+    if (Array.isArray(component.components)) {
+      for (const child of component.components) {
+        recurseComponents(child);
+      }
+    }
+  }
+
+  console.log("[RESTORE] ✅ Finished custom→blob replacement");
+}
+
+function restoreBlobURLs(project, assets) {
+  const customToBlobMap = {};
+
+  // 🔁 Tworzymy mapę custom: → blob:
+  for (const a of assets) {
+    const src = a.get('src');
+    const name = a.get('name');
+
+    if (src && name && src.startsWith('blob:')) {
+      const custom = `custom:anvil-assets/${name}`;
+      customToBlobMap[custom] = src;
+    }
+  }
+
+  // 🔁 Zamiana w `assets`
+  replaceCustomToBlobInAssets(project, customToBlobMap);
+
+  // 🔁 Zamiana w `pages`
+  replaceCustomToBlobInPages(project, customToBlobMap);
+}
