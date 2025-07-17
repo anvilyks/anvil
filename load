@@ -1,18 +1,24 @@
-waitForEditorAndRun(async () => {
+editor.onReady(async () => {
+    console.log("[READY] ✅ Editor is fully loaded");
+
+    // 1. Załaduj projekt i assety
     const project = await window.load_files_callback();
     const assets = editor.AssetManager.getAll().models;
 
+    // 2. Zbuduj custom → blob map
     const customToBlobMap = {};
     for (const a of assets) {
       const src = a.get('src');
       const name = a.get('name');
-
       if (src && name && src.startsWith('blob:')) {
         const custom = `custom:anvil-assets/${name}`;
         customToBlobMap[custom] = src;
       }
     }
 
+    // 3. Podmień custom: na blob: w projekcie
     replaceCustomToBlobInAssets(project, customToBlobMap);
     replaceCustomToBlobInPages(project, customToBlobMap);
+
+    console.log("[READY] ▶️ Custom URLs restored to blob URLs");
   });
