@@ -1,11 +1,11 @@
 editor.onReady(async () => {
     console.log("[READY] ✅ Editor is fully loaded");
 
-    // 1. Załaduj projekt i assety
-    const project = await window.load_files_callback();
+    // 1. Załaduj projekt i assety z backendu
+    const project = await window.load_files_callback(); // <- zakładam że to zwraca JSON projektu
     const assets = editor.AssetManager.getAll().models;
 
-    // 2. Zbuduj custom → blob map
+    // 2. Stwórz mapę custom: → blob:
     const customToBlobMap = {};
     for (const a of assets) {
       const src = a.get('src');
@@ -16,9 +16,12 @@ editor.onReady(async () => {
       }
     }
 
-    // 3. Podmień custom: na blob: w projekcie
+    // 3. Zamień w projekcie wszystkie custom: na blob:
     replaceCustomToBlobInAssets(project, customToBlobMap);
     replaceCustomToBlobInPages(project, customToBlobMap);
 
-    console.log("[READY] ▶️ Custom URLs restored to blob URLs");
+    // 4. Załaduj projekt do edytora
+    await editor.Project.setProjectData(project);
+
+    console.log("[READY] ▶️ Project loaded and src replaced");
   });
