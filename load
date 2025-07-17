@@ -1,27 +1,44 @@
-editor.onReady(async () => {
-    console.log("[READY] ✅ Editor is fully loaded");
+const waitForAssets = (min = 1) =>
+    new Promise((resolve) => {
+      const check = () => {
+        const assets = editor.AssetManager.getAll().models;
+        if (assets.length >= min) {
+          resolve(assets);
+        } else {
+          setTimeout(check, 100); // Sprawdza co 100ms
+        }
+      };
+      check();
+    });
 
-    // 1. Załaduj projekt i assety z backendu
-    const project = await window.load_files_callback(); // <- zakładam że to zwraca JSON projektu
-    const assets = editor.AssetManager.getAll().models;
+  const assets = await waitForAssets(1); // lub np. 10
 
-    // 2. Stwórz mapę custom: → blob:
-    const customToBlobMap = {};
-    for (const a of assets) {
-      const src = a.get('src');
-      const name = a.get('name');
-      if (src && name && src.startsWith('blob:')) {
-        const custom = `custom:anvil-assets/${name}`;
-        customToBlobMap[custom] = src;
-      }
+  console.log("✅ AssetManager gotowy:", assets.length, "assetów");
+
+  // 📦 Załaduj projekt z backendu
+  const project = await window.load_files_callback();
+  console.log("📥 Projekt pobrany");
+
+  // 🔄 Przywróć blob: z custom:
+  restoreBlobURLs(project, assets);
+
+  // 🔁 Zamień blob: → custom: przed zapisem
+  const customToBlobMap = {};
+  for (const a of assets) {
+    const src = a.get("src");
+    const name = a.get("name");
+    if (src?.startsWith("blob:") && name) {
+      customToBlobMap[`custom:anvil-assets/${name}`] = src;
     }
+  }
 
-    // 3. Zamień w projekcie wszystkie custom: na blob:
-    replaceCustomToBlobInAssets(project, customToBlobMap);
-    replaceCustomToBlobInPages(project, customToBlobMap);
+  replaceBlobToCustomInPages(project, customToBlobMap);
 
-    // 4. Załaduj projekt do edytora
-    await editor.Project.setProjectData(project);
+  // 🔧 Debug: pokaż strukturę
+  console.dir(project, { depth: null });
 
-    console.log("[READY] ▶️ Project loaded and src replaced");
-  });
+  // ⏳ Ładowanie projektu (setTimeout = opóźnienie na Canvas/pages)
+  setTimeout(async () => {
+    await editor.loadProjectData(project);
+    console.log("✅ Projekt załadowany");
+  }, 0);
