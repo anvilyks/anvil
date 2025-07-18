@@ -1,0 +1,14 @@
+window.destroyGrapeEditor = function() {
+  const container = document.getElementById("studio-editor");
+
+  if (window.editorInstance) {
+    console.log("🛑 Destroying GrapeJS editor");
+    window.editorInstance.destroy?.();  // zniszcz edytor
+    container.innerHTML = "";           // usuń DOM edytora
+    window.editorInstance = null;
+  } else {
+    console.warn("⚠️ No editor to destroy");
+  }
+
+  return "destroyed";
+};
