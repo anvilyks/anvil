@@ -1,0 +1,14 @@
+editor.Commands.add('store', {
+  run: async (editor) => {
+    // 🛡️ warunek: tylko gdy wyraźnie chcesz zapisać
+    if (!window.shouldSave) {
+      console.warn("⛔ Zapis zablokowany – powinien być tylko przez kliknięcie");
+      return;
+    }
+
+    window.shouldSave = false; // reset flagi
+    console.log("💾 Zapis przez GrapeJS Save Button");
+
+    await editor.store(); // wywołuje storage.onSave()
+  }
+});
