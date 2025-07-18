@@ -1,0 +1,12 @@
+assets: {
+  storageType: 'self',
+  onUpload: async ({ files }) => {
+    console.log('⛔ NIE ZAPISUJEMY automatycznie plików');
+    // Nie rób nic lub tylko zbierz pliki do lokalnego bufora
+    return [];
+  },
+  onDelete: async ({ assets }) => {
+    console.log('⛔ NIE USUWAMY automatycznie');
+    return;
+  }
+}
