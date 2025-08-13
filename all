@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- ... -->
+    <script src="https://unpkg.com/@grapesjs/studio-sdk/dist/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@grapesjs/studio-sdk-plugins@latest/dist/rteTinyMce/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@grapesjs/studio-sdk-plugins@latest/dist/layoutSidebarButtons/index.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@grapesjs/studio-sdk/dist/style.css"/>
+  
+  </head>
+  <body>
+    <div id="studio-editor" style="height: 100dvh"></div>
+    <script>
+     
+        let editor; // globalna zmienna
+      
+      const onReady = (studioEditor) => {
+        editor = studioEditor;
+        window.editorInstance = editor;
+        window.studioEditor = studioEditor;
+        // --- helpers ---
+        function applyLockState(cmp, locked) {
+          // znacznik własny
+          cmp.set('locked', !!locked);
+
+          // wyłącz wszystko co modyfikuje strukturę/treść
+          cmp.set({
+            draggable: !locked,
+            droppable: !locked,
+            copyable:  !locked,
+            removable: !locked,
+            editable:  !locked,
+            resizable: locked ? 0 : 1,   // brak uchwytów resize
+          });
+
+          // minimalny/niewidoczny toolbar gdy locked (opcjonalnie)
+          if (locked) cmp.set('toolbar', []);
+        }
+
+        // szybki toggle dla aktualnie wybranego
+        function toggleLockSelected(ed) {
+          const cmp = ed.getSelected();
+          if (!cmp) return;
+          const locked = !cmp.get('locked');
+          applyLockState(cmp, locked);
+          console.log(locked ? '🔒 locked' : '🔓 unlocked', cmp);
+        }
+
+        // --- 1) Komenda do podpinania pod Twoją kłódkę ---
+        editor.Commands.add('core:toggle-lock', {
+          run(ed) { toggleLockSelected(ed); }
+        });
+
+        const BLOCKED_CMDS = [
+          'tlb-delete', 'core:component-delete',
+          'tlb-clone',  'core:component-duplicate',
+          'tlb-move',   'core:component-move',
+        ];
+
+        // wrapper na runCommand
+        const _run = editor.runCommand.bind(editor);
+        editor.runCommand = function(id, opts) {
+          const sel = editor.getSelected();
+          if (sel && sel.get('locked') && BLOCKED_CMDS.includes(id)) {
+            console.warn('Blocked on locked component:', id);
+            return;
+          }
+          return _run(id, opts);
+        };
+
+        editor.on('rte:enable', () => {
+          const sel = editor.getSelected();
+          if (sel?.get('locked')) {
+            // natychmiast zamknij RTE
+            editor.trigger('rte:disable');
+          }
+        });
+        
+        
+        const FS_PATH = 'M9.5,13.09L10.91,14.5L6.41,19H10V21H3V14H5V17.59L9.5,13.09M10.91,9.5L9.5,10.91L5,6.41V10H3V3H10V5H6.41L10.91,9.5M14.5,13.09L19,17.59V14H21V21H14V19H17.59L13.09,14.5L14.5,13.09M13.09,9.5L17.59,5H14V3H21V10H19V6.41L14.5,10.91L13.09,9.5Z';
+        const IP_PATH = d="M2 12H4V17H20V12H22V17C22 18.11 21.11 19 20 19H4C2.9 19 2 18.11 2 17V12M12 15L17.55 9.54L16.13 8.13L13 11.25V2H11V11.25L7.88 8.13L6.46 9.55L12 15Z"
+        function removeFullscreenBtn(path) {
+          const btn = document
+            .querySelector(`.gs-cmp-editor-topbar svg path[d="${path}"]`)
+            ?.closest('button');
+          if (btn && btn.isConnected) {
+            btn.remove();
+            console.log('✅ Usunięto przycisk fullscreen');
+          }
+        }
+        removeFullscreenBtn(FS_PATH)
+        removeFullscreenBtn(IP_PATH)
+        new MutationObserver(removeFullscreenBtn)
+          .observe(document, { childList: true, subtree: true });
+
+        
+        // ⬇️ TU WKLEJ TO:
+        const idsToRemove = [
+          'mj-hero',
+          'mj-navbar',
+          'mj-social',
+          'mj-social-element',
+          'mj-raw'
+        ];
+
+        if (editor.BlockManager && typeof editor.BlockManager.remove === 'function') {
+          idsToRemove.forEach(id => {
+            if (editor.BlockManager.get(id)) {
+              editor.BlockManager.remove(id);
+            }
+          });
+        };
+        setTimeout(() => {
+          const btn = document.querySelector(
+            '[data-command="core:fullscreen"], [title="Fullscreen"], [aria-label="Fullscreen"]'
+          );
+          if (btn) {
+            btn.remove();
+            console.log('Fullscreen button removed');
+          } else {
+            console.log('Fullscreen button not found');
+          }
+        }, 0);
+        editor.AssetManager.add({
+          src: "https://wilted-tremendous-east.anvil.app/_/theme/baner.png",
+          name: "Baner z Anvil",
+          category: "Anvil",
+        });
+        
+
+      };
+  
+        const toggleAddPage = () => {
+          if (!editor) return console.warn("Editor not ready");
+          const config = editor.runCommand(GrapesJsStudioSDK.StudioCommands.getPagesConfig) || {};
+          editor.runCommand(GrapesJsStudioSDK.StudioCommands.setPagesConfig, {
+            config: { add: !config.add }
+          });
+        };
+  
+        const togglePageSettings = () => {
+          if (!editor) return console.warn("Editor not ready");
+          const state = editor.runCommand(GrapesJsStudioSDK.StudioCommands.getPageSettings) || {};
+          editor.runCommand(GrapesJsStudioSDK.StudioCommands.setPageSettings, {
+            isOpen: !state.isOpen
+          });
+        };
+        const ed = GrapesJsStudioSDK.createStudioEditor({
+        root: '#studio-editor',
+        licenseKey: '2212ca00d8524845ab8b2e7285c750714884c9f3d17642509f3830631f057be9',
+        theme: 'dark',
+        
+        project: {
+          type:'email',
+          id: 'UNIQUE_PROJECT_ID'
+        },
+          identity: {
+            // TODO: replace with a unique id for your end users. e.g. an uuid
+            id: 'UNIQUE_END_USER_ID'
+          },
+          onReady,
+          assets: {
+            storageType: 'cloud'
+          },
+        storage: {
+          type: 'self',
+          // Provide a custom handler for saving the project data.
+          onSave: async ({ project }) => {
+            
+            // const selectedPage = editor.Pages.getSelected();
+            // if (!selectedPage) throw new Error("Brak wybranej strony");
+
+            // const component = selectedPage.getMainComponent();
+            //const html = editor.getHtml({ component });
+            // const css = editor.getCss({ component });
+            
+            // console.log(html, css)
+        
+            window.save_template_callback('html', project).then(result => {
+              console.log("✅ async result:", result);
+            });
+
+           
+           
+            // await fetch("https://wilted-tremendous-east.anvil.app/_/api/save-template", {
+            //   method: "POST",
+            //   headers: {
+            //     "Content-Type": "application/json"
+            //   },
+            //   body: JSON.stringify({
+            //     template_id: "template-0013",
+            //     content: 1
+            //   })
+            // })
+            //   .then(async res => {
+            //     const contentType = res.headers.get("content-type");
+            //     const isJson = contentType && contentType.includes("application/json");
+
+            //     if (!res.ok) {
+            //       const text = await res.text();
+            //       throw new Error("Server error: " + text);
+            //     }
+
+            //     return isJson ? res.json() : res.text();
+            //   })
+            //   .then(data => {
+            //     console.log("Zapis zakończony:", data);
+            //   })
+            //   .catch(err => {
+            //     console.error("Błąd zapisu:", err.message);
+            //   });
+
+          },
+          // Provide a custom handler for loading project data.
+          onLoad: async () => {
+            
+            const valueFromAnvil = window.form_test_value;  // ⬅️ dostęp do wartości z Anvil
+            
+
+            const response = await fetch('https://wilted-tremendous-east.anvil.app/_/api/get-template');
+            const project = await response.json();
+            // The project JSON is expected to be returned inside an object.
+            return { project };
+          },
+          autosaveChanges: 100,
+          autosaveIntervalMs: 10000
+        },
+        plugins: [
+          StudioSdkPlugins_rteTinyMce.init({ /* Plugin options: https://app.grapesjs.com/docs-sdk/plugins/rte/tinymce */ }),
+          StudioSdkPlugins_layoutSidebarButtons.init({ /* Plugin options: https://app.grapesjs.com/docs-sdk/plugins/layout/sidebar-buttons */ })
+        ]
+      });
+      
+
+    </script>
+  </body>
+  <html>
