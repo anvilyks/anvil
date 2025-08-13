@@ -1,65 +1,56 @@
-try {
-    console.log("[1] onSave start");
+# Server Module
+import io, base64
+from PIL import Image, ImageOps
+import anvil.server
 
-    // 1. Pobierz HTML
-    const rawHtml = editor.getHtml();
-    console.log("[2] HTML before blob->cid replace:", rawHtml);
+# ── PODSTAW SWOJE IMPLEMENTACJE ───────────────────────────────
+def decrypt_bytes(encrypted: bytes) -> bytes:
+    # TODO: Twoja realna deszyfracja
+    return encrypted
 
-    // 2. Pobierz assety
-    const assets = editor.AssetManager.getAll().models;
-    const blobToCid = {};
+def encrypt_bytes(plain: bytes) -> bytes:
+    # TODO: Twoja realna szyfracja
+    return plain
+# ──────────────────────────────────────────────────────────────
 
-    assets.forEach((a, i) => {
-      const src = a.get('src');
-      const name = a.get('name');
-      if (!src || !name) {
-        console.warn(`[2.${i}] ⚠️ Asset missing src or name:`, a);
-        return;
-      }
-      if (src.startsWith('blob:')) {
-        blobToCid[src] = `cid:${name}`;
-        console.log(`[2.${i}] Mapped blob to cid:`, src, "→", blobToCid[src]);
-      }
-    });
+@anvil.server.callable
+def get_single_image_from_api_compressed(
+    file_name: str,
+    max_side: int = 1600,
+    quality: int = 60,
+    use_webp: bool = True
+):
+    # 1) Pobierz zaszyfrowane base64 z Twojej funkcji (NIE ZMIENIAMY JEJ)
+    encrypted_b64 = get_single_image_from_api(file_name)
 
-    // 3. Zamień blob: na cid: w HTML
-    let html = rawHtml;
-    for (const [blobUrl, cidUrl] of Object.entries(blobToCid)) {
-      const escapedBlobUrl = blobUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex
-      html = html.replace(new RegExp(escapedBlobUrl, 'g'), cidUrl);
-    }
-    console.log("[3] HTML after blob->cid:", html);
+    # 2) base64 -> bytes -> DECRYPT
+    encrypted_bytes = base64.b64decode(encrypted_b64)
+    original_bytes = decrypt_bytes(encrypted_bytes)
 
-    // 4. Zamień blob: na cid: w strukturze projektu
-    function replaceSrcRecursive(components) {
-      for (const comp of components || []) {
-        const oldSrc = comp.attributes?.src;
-        if (oldSrc?.startsWith('blob:')) {
-          const newSrc = blobToCid[oldSrc];
-          if (newSrc) {
-            comp.attributes.src = newSrc;
-            console.log("[4] Replaced in project:", oldSrc, "→", newSrc);
-          } else {
-            console.warn("[4] ⚠️ No cid mapping for:", oldSrc);
-          }
-        }
-        if (comp.components) {
-          replaceSrcRecursive(comp.components);
-        }
-      }
-    }
+    # 3) Pillow: orientacja EXIF, konwersja, skalowanie
+    im = Image.open(io.BytesIO(original_bytes))
+    im = ImageOps.exif_transpose(im)
 
-    console.log("[5] Start replacing project components");
-    project.pages.forEach((page) => {
-      console.log("[5.1] Page:", page.name || page.id);
-      replaceSrcRecursive(page.components);
-    });
+    if use_webp:
+        # WebP: RGB/RGBA
+        im = im.convert("RGBA" if "A" in im.getbands() else "RGB")
+    else:
+        # JPEG: zawsze RGB
+        im = im.convert("RGB")
 
-    console.log("[6] Saving to server...");
-    await anvil.server.call('save_template_project', project, html);
+    im.thumbnail((max_side, max_side), Image.LANCZOS)
 
-    console.log("✅ [7] Project successfully saved");
+    # 4) Zapis skompresowany
+    out = io.BytesIO()
+    if use_webp:
+        im.save(out, format="WEBP", quality=quality, method=6)
+    else:
+        im.save(out, format="JPEG",
+                quality=quality, optimize=True, progressive=True, subsampling=2)
 
-  } catch (error) {
-    console.error("❌ onSave failed:", error);
-  }
+    compressed_bytes = out.getvalue()
+
+    # 5) ENCRYPT -> base64 i ZWRÓĆ DOKŁADNIE TAK JAK U CIEBIE (SAMO base64)
+    re_encrypted = encrypt_bytes(compressed_bytes)
+    b64_out = base64.b64encode(re_encrypted).decode("ascii")
+    return b64_out
