@@ -1,0 +1,205 @@
+Skip to content
+Chat history
+
+You said:
+Uploaded image
+mam w Anviul przekazywanie załączników image jako encrypted file. chce te zdjęcia mocno kompresowac przed wysyłką jak to zrobić? 
+ChatGPT said:
+
+Thought for 51s
+Jasne — da się to zrobić na dwa sposoby: po stronie przeglądarki (zanim w ogóle coś wyślesz) albo po stronie serwera Anvil (zaraz po pobraniu/odszyfrowaniu pliku).
+Ponieważ chcesz „mocno” kompresować przed wysyłką, najkorzystniej jest zrobić to po stronie klienta na <canvas> i wysłać już przeskalowany, skompresowany obraz. Jeśli wolisz prostsze rozwiązanie bez JS, zostawiłem też wariant serwerowy (Pillow).
+
+1) Klient (Anvil) – kompresja w przeglądarce
+Poniższa funkcja bierze data URL (u Ciebie tworzysz je jako "data:{mime};base64,{encrypted_file}"), rysuje obraz na canvasie, zmniejsza rozdzielczość i zapisuje jako WebP albo JPEG z podaną jakością. Zwraca anvil.BlobMedia, który możesz zaszyfrować i wysłać.
+
+# Client code (Form)
+from anvil.js import window
+import anvil
+from anvil import BlobMedia
+import base64
+
+async def compress_data_url_to_media(data_url, max_side=1600, quality=0.6, mime="image/webp"):
+  # 1) Załaduj obraz
+  img = window.Image.new()
+  img.src = data_url
+  await img.decode()  # czeka aż się wczyta
+
+  # 2) Wylicz nowy rozmiar (maksymalny bok = max_side)
+  w, h = img.width, img.height
+  scale = min(1, max_side / max(w, h))
+  new_w, new_h = int(w * scale), int(h * scale)
+
+  # 3) Canvas + rysowanie
+  canvas = window.document.createElement("canvas")
+  canvas.width = new_w
+  canvas.height = new_h
+  ctx = canvas.getContext("2d")
+  ctx.drawImage(img, 0, 0, new_w, new_h)
+
+  # 4) Eksport do skompresowanego blobu (WebP/JPEG)
+  blob = await window.Promise.new(lambda resolve, reject:
+      canvas.toBlob(resolve, mime, quality))
+
+  # 5) Blob -> bytes -> BlobMedia
+  array_buf = await blob.arrayBuffer()
+  py_bytes = bytes(window.Uint8Array.new(array_buf))
+  filename = "image." + ("webp" if mime.endswith("webp") else "jpg")
+  return BlobMedia(mime, py_bytes, name=filename)
+Użycie w Twoim przebiegu:
+
+async def appi_file_names():
+  images = anvil.server.call('get_images_from_api')  # lista nazw
+  results = {}
+
+  for data in images:
+    file_name = data.get("file_name")
+    file_ending = file_name.split(".")[-1].lower()
+    # Odbierz **niekompresowany** obraz (po odszyfrowaniu u Ciebie albo w API)
+    data_url = anvil.server.call('get_single_image_data_url', file_name)  
+    # data_url = "data:image/...;base64,....."
+
+    # MOCNA kompresja do WebP (np. max 1600px, quality 0.5)
+    media = await compress_data_url_to_media(
+        data_url,
+        max_side=1600,
+        quality=0.5,
+        mime="image/webp"    # ewentualnie "image/jpeg"
+    )
+
+    # (opcjonalnie) usuń EXIF – już i tak nie będzie, bo canvas go nie przenosi
+    # Zaszyfruj media.get_bytes() po swojej stronie i wyślij
+    enc_b64 = anvil.server.call('encrypt_and_b64', media.get_bytes())
+
+    results[file_name] = {
+      "base64": f"data:{media.content_type};base64,{enc_b64}",
+      "type": media.content_type
+    }
+
+  return results
+Dlaczego to działa „przed wysyłką”: cały ciężar (skalowanie + kompresja) dzieje się w przeglądarce, więc na serwer leci już dużo mniejszy plik.
+
+Wskazówki dot. jakości/rozmiaru
+
+Ustaw max_side na 1280–1920 (zależnie od potrzeb UI).
+
+mime="image/webp" daje zwykle mniejsze pliki niż JPEG.
+
+quality 0.5–0.65 to mocna kompresja użytkowo „OK” dla miniatur/podglądów.
+
+Canvas zdejmuje metadane (EXIF), co także zmniejsza rozmiar.
+
+2) Serwer (Anvil) – kompresja Pillow po pobraniu
+Jeśli chcesz trzymać się logiki serwerowej, skompresuj obraz zaraz po pobraniu (i przed ewentualnym szyfrowaniem/wysyłką dalej):
+
+# Server Module (requires Pillow)
+import io, base64, requests
+from PIL import Image
+import anvil.server
+
+@anvil.server.callable
+def get_single_image_data_url(file_name, max_side=1600, quality=60, use_webp=True):
+    # 1) Pobierz oryginał
+    url = f"https://twoje.api/{file_name}"
+    orig_bytes = requests.get(url, timeout=20).content
+
+    # 2) Pillow: otwórz, konwertuj, przeskaluj
+    im = Image.open(io.BytesIO(orig_bytes))
+    im = im.convert("RGB")  # pewna ścieżka do JPEG/WebP
+    im.thumbnail((max_side, max_side), Image.LANCZOS)
+
+    # 3) Zapisz skompresowane
+    out = io.BytesIO()
+    if use_webp:
+        im.save(out, format="WEBP", quality=quality, method=6)
+        mime = "image/webp"
+    else:
+        im.save(out, format="JPEG", quality=quality, optimize=True, progressive=True, subsampling=2)
+        mime = "image/jpeg"
+
+    compressed = out.getvalue()
+    b64 = base64.b64encode(compressed).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+Tipy do „mocnej” kompresji na serwerze:
+
+Zawsze zmniejsz rozdzielczość (thumbnail/resize) – to daje największy zysk.
+
+Preferuj WebP (quality 50–70).
+
+Dla JPEG ustaw optimize=True, progressive=True, subsampling=2.
+
+Usuń metadane (konwersja do RGB + ponowny zapis już je usuwa).
+
+Co wybrać?
+Chcesz oszczędzić upload (czas i transfer): wariant klientowy (canvas).
+
+Wolisz prostotę i nie zależy Ci na transferze klient → serwer: wariant serwerowy (Pillow).
+
+Jeśli podasz, gdzie dokładnie w Twoim flow następuje szyfrowanie (przed/po data URL), mogę wstrzelić się idealnie w Twój kod i dorzucić gotowe funkcje encrypt/decrypt na BlobMedia/bytes.
+
+You said:
+# Client code (Form)
+from anvil.js import window
+import anvil
+from anvil import BlobMedia
+import base64
+
+async def compress_data_url_to_media(data_url, max_side=1600, quality=0.6, mime="image/webp"):
+  # 1) Załaduj obraz
+  img = window.Image.new()
+  img.src = data_url
+  await img.decode()  # czeka aż się wczyta
+
+  # 2) Wylicz nowy rozmiar (maksymalny bok = max_side)
+  w, h = img.width, img.height
+  scale = min(1, max_side / max(w, h))
+  new_w, new_h = int(w * scale), int(h * scale)
+
+  # 3) Canvas + rysowanie
+  canvas = window.document.createElement("canvas")
+  canvas.width = new_w
+  canvas.height = new_h
+  ctx = canvas.getContext("2d")
+  ctx.drawImage(img, 0, 0, new_w, new_h)
+
+  # 4) Eksport do skompresowanego blobu (WebP/JPEG)
+  blob = await window.Promise.new(lambda resolve, reject:
+      canvas.toBlob(resolve, mime, quality))
+
+  # 5) Blob -> bytes -> BlobMedia
+  array_buf = await blob.arrayBuffer()
+  py_bytes = bytes(window.Uint8Array.new(array_buf))
+  filename = "image." + ("webp" if mime.endswith("webp") else "jpg")
+  return BlobMedia(mime, py_bytes, name=filename)  czy moge te funkcję dać w util po stronie serwera?
+ChatGPT said:
+Nie — tej konkretnej funkcji nie możesz przenieść do util po stronie serwera,
+bo ona korzysta z:
+
+anvil.js → dostępne tylko w kodzie klienta (uruchamianym w przeglądarce).
+
+window.Image, canvas → to są obiekty DOM/HTML5, które istnieją tylko w przeglądarce.
+
+Serwer Anvil nie ma przeglądarki ani kontekstu JS/DOM, więc te wywołania tam nie działają.
+
+Jeśli chcesz mieć „taką samą” funkcję na serwerze, musiałbyś:
+
+napisać wersję w Pythonie serwerowym z użyciem biblioteki Pillow (PIL)
+do otwierania obrazów, skalowania i zapisu do WebP/JPEG.
+
+nie będzie tam canvas, tylko Image.open(...), thumbnail(...) i save(...).
+
+💡 Możesz zrobić tak:
+
+Wersja klientowa (canvas) → kompresuje obraz przed wysyłką na serwer.
+
+Wersja serwerowa (Pillow) → kompresuje obraz, który już jest na serwerze (np. pobrany z API).
+
+Chcesz, żebym przygotował Ci analogiczną wersję tej funkcji w Pythonie serwerowym z Pillow, żeby działała tak jak Twoja klientowa?
+
+
+
+
+
+
+Nie wybrano plikuNie wybrano pliku
+ChatGPT can make mistakes. Check important info. See Cookie Preferences.
