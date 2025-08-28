@@ -1,4 +1,4 @@
-{
+ {
         "title": "",              # nagłówek będzie zbudowany przez titleFormatter
         "headerSort": False,
         "hozAlign": "center",
@@ -15,3 +15,8 @@
               b.style.padding = '4px 8px';
               return b;   // to trafi do nagłówka tej kolumny
             }
+        """,
+
+        # Klik w nagłówek tej kolumny
+        "headerClick": self.toggle_details_header,  # -> funkcja niżej
+    }
