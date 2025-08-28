@@ -1,0 +1,17 @@
+{
+        "title": "",              # nagłówek będzie zbudowany przez titleFormatter
+        "headerSort": False,
+        "hozAlign": "center",
+        "width": 160,
+
+        # Rysujemy button w nagłówku
+        "titleFormatter": """
+            function(cell, formatterParams, onRendered){
+              var b = document.createElement('button');
+              b.type = 'button';
+              b.textContent = 'More details ▼';
+              b.className = 'anvil-button';
+              b.style.cursor = 'pointer';
+              b.style.padding = '4px 8px';
+              return b;   // to trafi do nagłówka tej kolumny
+            }
