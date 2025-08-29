@@ -1,71 +1,43 @@
- {
-        "title": "",              # nagłówek będzie zbudowany przez titleFormatter
-        "headerSort": False,
-        "hozAlign": "center",
-        "width": 160,
+/* ——— Nagłówek: tytuł u góry, filtr na dole ——— */
 
-        # Rysujemy button w nagłówku
-        "titleFormatter": """
-            function(cell, formatterParams, onRendered){
-              var b = document.createElement('button');
-              b.type = 'button';
-              b.textContent = 'More details ▼';
-              b.className = 'anvil-button';
-              b.style.cursor = 'pointer';
-              b.style.padding = '4px 8px';
-              return b;   // to trafi do nagłówka tej kolumny
-            }
-        """,
-
-        # Klik w nagłówek tej kolumny
-        "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
-    }
-/* 1) Cała komórka nagłówka to kolumna (wysokość rośnie wraz z najdłuższym tytułem) */
+/* 1) Komórka nagłówka może rosnąć i układa się pionowo */
 .tabulator .tabulator-header .tabulator-col{
-  display: flex !important;
-  flex-direction: column !important;
-  height: auto !important;
+  display: flex;
+  flex-direction: column;
+  height: auto;           /* pozwól rosnąć przy długich tytułach */
+  min-height: 64px;       /* zapewnij miejsce, by filtr miał gdzie "siąść" */
 }
 
-/* 2) Wnętrze nagłówka rozciągamy pionowo (tytuł u góry, filtr na dole) */
+/* 2) Wnętrze nagłówka też pionowo i wypełnia wysokość komórki */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content{
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;   /* WYPEŁNIA całą wysokość komórki */
-  min-height: 0 !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
+  display: flex;
+  flex-direction: column; /* tytuł u góry */
+  flex: 1 1 auto;         /* rozciągnij na całą wysokość */
+  min-height: 0;
 }
 
-/* 3) Tytuł może się zawijać i wypełnia przestrzeń nad filtrem */
+/* 3) Tytuł może się zawijać; strzałka sortowania przy górnej krawędzi */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
-  white-space: normal !important;
-  word-break: break-word !important;
-  line-height: 1.2 !important;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
 }
-
-/* 4) Sorter obok tytułu, wyrównany do góry (żeby nie podbijał filtra) */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title-holder{
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 6px !important;
+  display: flex;
+  align-items: flex-start; /* sorter u góry, nie pcha filtra */
+  gap: 6px;
 }
 
-/* 5) KLUCZ: filtr zawsze na dole – działa dla obu wariantów DOM Tabulatora */
+/* 4) KLUCZ: filtr zawsze na dole (obejmuje oba warianty DOM Tabulatora) */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content > .tabulator-header-filter,
 .tabulator .tabulator-header .tabulator-col > .tabulator-header-filter{
-  margin-top: auto !important;     /* dociska filtr do dołu */
+  margin-top: auto;        /* dociśnij filtr do dołu */
 }
 
-/* 6) Ujednolicenie pól filtra (żeby linia dołu była równa) */
+/* 5) Ładny, równy wygląd pól filtrów (opcjonalnie) */
 .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
 .tabulator .tabulator-header .tabulator-col .tabulator-header-filter select{
-  width: 100% !important;
-  box-sizing: border-box !important;
-  height: 28px !important;
-}
-
-/* 7) Sam header może rosnąć */
-.tabulator .tabulator-header{
-  height: auto !important;
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
 }
