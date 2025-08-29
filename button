@@ -20,3 +20,28 @@
         # Klik w nagłówek tej kolumny
         "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
     }
+
+
+/* 1) pozwól tytułom kolumn zawijać się */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-title{
+  white-space: normal !important;      /* a nie nowrap */
+  word-break: break-word;              /* łamie długie słowa */
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.2;
+}
+
+/* 2) niech komórka nagłówka zwiększa wysokość */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content{
+  height: auto !important;
+  display: flex;
+  align-items: flex-start;             /* strzałka sortowania u góry */
+  gap: 6px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* (opcjonalnie) popraw pozycję strzałki sortowania */
+.tabulator .tabulator-header .tabulator-col .tabulator-arrow{
+  margin-top: 2px;
+}
