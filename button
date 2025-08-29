@@ -18,5 +18,5 @@
         """,
 
         # Klik w nagłówek tej kolumny
-        "headerClick": self.toggle_details_header,  # -> funkcja niżej
+        "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
     }
