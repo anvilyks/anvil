@@ -1,40 +1,42 @@
-/* ——— Nagłówek: tytuł u góry, filtr na dole ——— */
-
-/* 1) Komórka nagłówka może rosnąć i układa się pionowo */
+/* Komórka nagłówka: układ pionowy, może rosnąć */
 .tabulator .tabulator-header .tabulator-col{
   display: flex;
   flex-direction: column;
-  height: auto;           /* pozwól rosnąć przy długich tytułach */
-  min-height: 64px;       /* zapewnij miejsce, by filtr miał gdzie "siąść" */
+  height: auto;
 }
 
-/* 2) Wnętrze nagłówka też pionowo i wypełnia wysokość komórki */
+/* Wnętrze nagłówka rozciągnięte na całą wysokość */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content{
   display: flex;
-  flex-direction: column; /* tytuł u góry */
-  flex: 1 1 auto;         /* rozciągnij na całą wysokość */
+  flex-direction: column;      /* tytuł u góry */
+  flex: 1 1 auto;              /* wypełnij wysokość komórki */
   min-height: 0;
 }
 
-/* 3) Tytuł może się zawijać; strzałka sortowania przy górnej krawędzi */
+/* Tytuł: ZAWIJANIE na 100% – działa także dla długich tokenów */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
-  white-space: normal;
-  word-break: break-word;
+  white-space: normal !important;     /* wyłącz nowrap */
+  overflow-wrap: anywhere !important; /* najskuteczniejsze łamanie */
+  word-break: break-word !important;  /* fallback dla części przeglądarek */
+  text-overflow: clip !important;     /* żadnych kropek … */
+  overflow: visible !important;
   line-height: 1.2;
 }
+
+/* Sorter obok tytułu, przy górnej krawędzi (nie podbija filtra) */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title-holder{
   display: flex;
-  align-items: flex-start; /* sorter u góry, nie pcha filtra */
+  align-items: flex-start;
   gap: 6px;
 }
 
-/* 4) KLUCZ: filtr zawsze na dole (obejmuje oba warianty DOM Tabulatora) */
+/* FILTR zawsze przy dole – działa dla obu wariantów DOM Tabulatora */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content > .tabulator-header-filter,
 .tabulator .tabulator-header .tabulator-col > .tabulator-header-filter{
-  margin-top: auto;        /* dociśnij filtr do dołu */
+  margin-top: auto;  /* dociśnij na dół */
 }
 
-/* 5) Ładny, równy wygląd pól filtrów (opcjonalnie) */
+/* Jednolity wygląd pól filtrów (opcjonalnie) */
 .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
 .tabulator .tabulator-header .tabulator-col .tabulator-header-filter select{
   width: 100%;
