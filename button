@@ -20,36 +20,39 @@
         # Klik w nagłówek tej kolumny
         "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
     }
-/* Tytuł może się zawijać */
+
+/* 1) Cała komórka nagłówka jako kolumna */
+.tabulator .tabulator-header .tabulator-col{
+  display: flex;
+  flex-direction: column;
+  height: auto !important;     /* pozwól rosnąć, gdy tytuł się zawija */
+}
+
+/* 2) Tytuł może się zawijać */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
   white-space: normal !important;
   word-break: break-word;
   line-height: 1.2;
-  flex: 1 1 auto;                 /* wypełnia miejsce nad filtrem */
 }
 
-/* Układ pionowy w komórce nagłówka */
-.tabulator .tabulator-header .tabulator-col .tabulator-col-content{
+/* 3) Kontener tytułu + strzałka */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-title-holder{
   display: flex;
-  flex-direction: column;         /* tytuł u góry, filtr na dole */
-  height: auto !important;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  align-items: flex-start;      /* strzałka u góry */
 }
 
-/* Filtr zawsze przy dole */
-.tabulator .tabulator-header .tabulator-col .tabulator-header-filter{
-  order: 99;                      /* na końcu */
-  margin-top: auto;               /* dociśnij do dołu */
+/* 4) Filtr zawsze przy dolnej krawędzi komórki nagłówka */
+.tabulator .tabulator-header .tabulator-col > .tabulator-header-filter{
+  margin-top: auto;             /* KLUCZ: dociśnij na dół */
 }
 
-/* Ujednolicony wygląd pól filtrów */
-.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
-.tabulator .tabulator-header .tabulator-col .tabulator-header-filter select{
+/* 5) estetyka pól filtrów */
+.tabulator .tabulator-header .tabulator-col > .tabulator-header-filter input,
+.tabulator .tabulator-header .tabulator-col > .tabulator-header-filter select{
   width: 100%;
   box-sizing: border-box;
-  height: 28px;                   /* stała wysokość, opcjonalnie */
+  height: 28px;
 }
 
-/* Gdyby Tabulator trzymał sztywną wysokość nagłówka */
-.tabulator .tabulator-header{ height: auto !important; }
+/* 6) na wszelki wypadek */
+.tabulator .tabulator-header{ height:auto !important; }
