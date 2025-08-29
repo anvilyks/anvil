@@ -20,39 +20,52 @@
         # Klik w nagłówek tej kolumny
         "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
     }
-
-/* 1) Cała komórka nagłówka jako kolumna */
+/* 1) Cała komórka nagłówka to kolumna (wysokość rośnie wraz z najdłuższym tytułem) */
 .tabulator .tabulator-header .tabulator-col{
-  display: flex;
-  flex-direction: column;
-  height: auto !important;     /* pozwól rosnąć, gdy tytuł się zawija */
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
 }
 
-/* 2) Tytuł może się zawijać */
+/* 2) Wnętrze nagłówka rozciągamy pionowo (tytuł u góry, filtr na dole) */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content{
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;   /* WYPEŁNIA całą wysokość komórki */
+  min-height: 0 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+/* 3) Tytuł może się zawijać i wypełnia przestrzeń nad filtrem */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
   white-space: normal !important;
-  word-break: break-word;
-  line-height: 1.2;
+  word-break: break-word !important;
+  line-height: 1.2 !important;
 }
 
-/* 3) Kontener tytułu + strzałka */
+/* 4) Sorter obok tytułu, wyrównany do góry (żeby nie podbijał filtra) */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title-holder{
-  display: flex;
-  align-items: flex-start;      /* strzałka u góry */
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
 }
 
-/* 4) Filtr zawsze przy dolnej krawędzi komórki nagłówka */
+/* 5) KLUCZ: filtr zawsze na dole – działa dla obu wariantów DOM Tabulatora */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content > .tabulator-header-filter,
 .tabulator .tabulator-header .tabulator-col > .tabulator-header-filter{
-  margin-top: auto;             /* KLUCZ: dociśnij na dół */
+  margin-top: auto !important;     /* dociska filtr do dołu */
 }
 
-/* 5) estetyka pól filtrów */
-.tabulator .tabulator-header .tabulator-col > .tabulator-header-filter input,
-.tabulator .tabulator-header .tabulator-col > .tabulator-header-filter select{
-  width: 100%;
-  box-sizing: border-box;
-  height: 28px;
+/* 6) Ujednolicenie pól filtra (żeby linia dołu była równa) */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter select{
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: 28px !important;
 }
 
-/* 6) na wszelki wypadek */
-.tabulator .tabulator-header{ height:auto !important; }
+/* 7) Sam header może rosnąć */
+.tabulator .tabulator-header{
+  height: auto !important;
+}
