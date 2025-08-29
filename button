@@ -20,33 +20,36 @@
         # Klik w nagłówek tej kolumny
         "headerClick": lambda e, c, target="tabulator_1_part_2": self.toggle_details_header(e, c, target)r,  # -> funkcja niżej
     }
-
-
-/* 1) Tytuły mogą się zawijać */
+/* Tytuł może się zawijać */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
   white-space: normal !important;
   word-break: break-word;
   line-height: 1.2;
+  flex: 1 1 auto;                 /* wypełnia miejsce nad filtrem */
 }
 
-/* 2) Nagłówek układamy pionowo i pozwalamy mu rosnąć */
+/* Układ pionowy w komórce nagłówka */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content{
   display: flex;
-  flex-direction: column;       /* tytuł u góry, filter niżej */
+  flex-direction: column;         /* tytuł u góry, filtr na dole */
   height: auto !important;
   padding-top: 6px;
   padding-bottom: 6px;
 }
 
-/* 3) Filtr zawsze przyklejony do dołu komórki nagłówka */
+/* Filtr zawsze przy dole */
 .tabulator .tabulator-header .tabulator-col .tabulator-header-filter{
-  order: 99;                    /* na końcu */
-  margin-top: auto;             /* dociśnij do dołu */
+  order: 99;                      /* na końcu */
+  margin-top: auto;               /* dociśnij do dołu */
 }
 
-/* 4) Drobiazgi estetyczne */
-.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input{
+/* Ujednolicony wygląd pól filtrów */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter select{
   width: 100%;
   box-sizing: border-box;
+  height: 28px;                   /* stała wysokość, opcjonalnie */
 }
-.tabulator .tabulator-header{ height: auto !important; }  /* gdyby Tabulator trzymał sztywną wysokość */
+
+/* Gdyby Tabulator trzymał sztywną wysokość nagłówka */
+.tabulator .tabulator-header{ height: auto !important; }
