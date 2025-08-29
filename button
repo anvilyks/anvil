@@ -22,26 +22,31 @@
     }
 
 
-/* 1) pozwól tytułom kolumn zawijać się */
+/* 1) Tytuły mogą się zawijać */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title{
-  white-space: normal !important;      /* a nie nowrap */
-  word-break: break-word;              /* łamie długie słowa */
-  overflow: visible !important;
-  text-overflow: clip !important;
+  white-space: normal !important;
+  word-break: break-word;
   line-height: 1.2;
 }
 
-/* 2) niech komórka nagłówka zwiększa wysokość */
+/* 2) Nagłówek układamy pionowo i pozwalamy mu rosnąć */
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content{
-  height: auto !important;
   display: flex;
-  align-items: flex-start;             /* strzałka sortowania u góry */
-  gap: 6px;
+  flex-direction: column;       /* tytuł u góry, filter niżej */
+  height: auto !important;
   padding-top: 6px;
   padding-bottom: 6px;
 }
 
-/* (opcjonalnie) popraw pozycję strzałki sortowania */
-.tabulator .tabulator-header .tabulator-col .tabulator-arrow{
-  margin-top: 2px;
+/* 3) Filtr zawsze przyklejony do dołu komórki nagłówka */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter{
+  order: 99;                    /* na końcu */
+  margin-top: auto;             /* dociśnij do dołu */
 }
+
+/* 4) Drobiazgi estetyczne */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input{
+  width: 100%;
+  box-sizing: border-box;
+}
+.tabulator .tabulator-header{ height: auto !important; }  /* gdyby Tabulator trzymał sztywną wysokość */
